@@ -78,9 +78,17 @@ public class MyTurnBot extends TelegramLongPollingBot {
 
     private void handleIncomingMessage(User user, String messageText) {
         if ("/start".equals(messageText)) {
-            startRegistration(user);
+            if (user.isRegistrationCompleted()) {
+                sendMessage(user.getChatId(), "Вы уже зарегистрированы. Используйте /menu для доступа к функциям бота.");
+            } else {
+                startRegistration(user);
+            }
         } else if ("/menu".equals(messageText)) {
-            sendMainMenu(user.getChatId());
+            if (user.isRegistrationCompleted()) {
+                sendMainMenu(user.getChatId());
+            } else {
+                sendMessage(user.getChatId(), "Пожалуйста, сначала завершите регистрацию.");
+            }
         } else {
             processUserInput(user, messageText);
         }
@@ -128,6 +136,10 @@ public class MyTurnBot extends TelegramLongPollingBot {
 
     private void processUserInput(User user, String messageText) {
         switch (user.getRegistrationState()) {
+            case NEW:
+            case COMPLETED:
+                sendMessage(user.getChatId(), "Используйте команду /menu для доступа к функциям бота.");
+                break;
             case AWAITING_FIRST_NAME:
                 user.setFirstName(messageText);
                 user.setRegistrationState(User.RegistrationState.AWAITING_LAST_NAME);
@@ -147,9 +159,6 @@ public class MyTurnBot extends TelegramLongPollingBot {
                 } catch (IllegalArgumentException e) {
                     sendMessage(user.getChatId(), "Неверный формат номера телефона. Пожалуйста, используйте кнопку 'Отправить номер телефона' или введите номер в формате +XXXXXXXXXXX.");
                 }
-                break;
-            case COMPLETED:
-                sendMessage(user.getChatId(), "Используйте команду /menu для доступа к функциям бота.");
                 break;
         }
     }
