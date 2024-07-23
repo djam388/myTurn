@@ -14,12 +14,12 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.bots.TelegramLongPollingBot;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.Update;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardButton;
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDateTime;
@@ -77,74 +77,42 @@ public class MyTurnBot extends TelegramLongPollingBot {
     }
 
     private void handleIncomingMessage(User user, String messageText) {
-        if ("/start".equals(messageText)) {
+        if ("/start".equals(messageText) || "Начать".equals(messageText)) {
             if (user.isRegistrationCompleted()) {
-                sendMessage(user.getChatId(), "Вы уже зарегистрированы. Используйте /menu для доступа к функциям бота.");
+                sendMessageWithMenuButton(user.getChatId(), "Вы уже зарегистрированы. Используйте кнопку 'Меню' для доступа к функциям бота.");
             } else {
                 startRegistration(user);
             }
-        } else if ("/menu".equals(messageText)) {
+        } else if ("/menu".equals(messageText) || "Меню".equals(messageText)) {
             if (user.isRegistrationCompleted()) {
                 sendMainMenu(user.getChatId());
             } else {
-                sendMessage(user.getChatId(), "Пожалуйста, сначала завершите регистрацию.");
+                sendMessageWithStartButton(user.getChatId(), "Пожалуйста, сначала завершите регистрацию.");
             }
         } else {
             processUserInput(user, messageText);
         }
     }
 
-    private void handleCallbackQuery(long chatId, String callData) {
-        switch (callData) {
-            case "SHOW_DOCTORS":
-                sendDoctorsList(chatId);
-                break;
-            case "MY_APPOINTMENTS":
-                sendUserAppointments(userService.getUserByChatId(chatId));
-                break;
-            case "MY_PROFILE":
-                sendUserProfile(chatId);
-                break;
-            default:
-                if (callData.startsWith("DOCTOR_")) {
-                    Long doctorId = Long.parseLong(callData.split("_")[1]);
-                    sendDoctorDetails(chatId, doctorId);
-                } else if (callData.startsWith("BOOK_")) {
-                    Long doctorId = Long.parseLong(callData.split("_")[1]);
-                    handleBookingRequest(userService.getUserByChatId(chatId), doctorId);
-                }
-                break;
-        }
-    }
-
-    private void sendUserProfile(long chatId) {
-        User user = userService.getUserByChatId(chatId);
-        if (user != null) {
-            String profileInfo = String.format("Ваш профиль:\nИмя: %s\nФамилия: %s\nТелефон: %s",
-                    user.getFirstName(), user.getLastName(), user.getPhoneNumber());
-            sendMessage(chatId, profileInfo);
-        } else {
-            sendMessage(chatId, "Ошибка: пользователь не найден.");
-        }
-    }
-
     private void startRegistration(User user) {
         user.setRegistrationState(User.RegistrationState.AWAITING_FIRST_NAME);
         userService.updateUser(user);
-        sendMessage(user.getChatId(), "Добро пожаловать в сервис записи к врачу! Пожалуйста, введите ваше имя.");
+        sendMessageWithoutKeyboard(user.getChatId(), "Добро пожаловать в сервис записи к врачу! Пожалуйста, введите ваше имя.");
     }
 
     private void processUserInput(User user, String messageText) {
         switch (user.getRegistrationState()) {
             case NEW:
+                sendMessageWithStartButton(user.getChatId(), "Нажмите кнопку 'Начать' для регистрации.");
+                break;
             case COMPLETED:
-                sendMessage(user.getChatId(), "Используйте команду /menu для доступа к функциям бота.");
+                sendMessageWithMenuButton(user.getChatId(), "Используйте кнопку 'Меню' для доступа к функциям бота.");
                 break;
             case AWAITING_FIRST_NAME:
                 user.setFirstName(messageText);
                 user.setRegistrationState(User.RegistrationState.AWAITING_LAST_NAME);
                 userService.updateUser(user);
-                sendMessage(user.getChatId(), "Спасибо! Теперь введите вашу фамилию.");
+                sendMessageWithoutKeyboard(user.getChatId(), "Спасибо! Теперь введите вашу фамилию.");
                 break;
             case AWAITING_LAST_NAME:
                 user.setLastName(messageText);
@@ -157,53 +125,75 @@ public class MyTurnBot extends TelegramLongPollingBot {
                     authService.setPhoneNumber(user, messageText);
                     completeRegistration(user);
                 } catch (IllegalArgumentException e) {
-                    sendMessage(user.getChatId(), "Неверный формат номера телефона. Пожалуйста, используйте кнопку 'Отправить номер телефона' или введите номер в формате +XXXXXXXXXXX.");
+                    sendMessageWithoutKeyboard(user.getChatId(), "Неверный формат номера телефона. Пожалуйста, используйте кнопку 'Отправить номер телефона' или введите номер в формате +XXXXXXXXXXX.");
                 }
                 break;
         }
     }
 
-    private void requestPhoneNumber(long chatId) {
+    private void sendMessageWithStartButton(long chatId, String text) {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
-        message.setText("Пожалуйста, предоставьте ваш номер телефона, нажав на кнопку ниже или введите его вручную в формате +XXXXXXXXXXX.");
+        message.setText(text);
 
         ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
         List<KeyboardRow> keyboard = new ArrayList<>();
         KeyboardRow row = new KeyboardRow();
-        KeyboardButton button = new KeyboardButton("Отправить номер телефона");
-        button.setRequestContact(true);
-        row.add(button);
+        row.add(new KeyboardButton("Начать"));
         keyboard.add(row);
         keyboardMarkup.setKeyboard(keyboard);
-        keyboardMarkup.setOneTimeKeyboard(true);
         keyboardMarkup.setResizeKeyboard(true);
+        keyboardMarkup.setOneTimeKeyboard(false);
+
         message.setReplyMarkup(keyboardMarkup);
 
         try {
             execute(message);
+            logger.debug("Message sent to chat ID: {}", chatId);
         } catch (TelegramApiException e) {
             logger.error("Failed to send message to chat ID: {}", chatId, e);
         }
     }
 
-    private void processPhoneNumber(User user, String phoneNumber) {
-        if (user.getRegistrationState() == User.RegistrationState.AWAITING_PHONE_NUMBER) {
-            try {
-                authService.setPhoneNumber(user, phoneNumber);
-                completeRegistration(user);
-            } catch (IllegalArgumentException e) {
-                sendMessage(user.getChatId(), "Неверный формат номера телефона. Пожалуйста, попробуйте еще раз.");
-                requestPhoneNumber(user.getChatId());
-            }
+    private void sendMessageWithMenuButton(long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(text);
+
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        KeyboardRow row = new KeyboardRow();
+        row.add(new KeyboardButton("Меню"));
+        keyboard.add(row);
+        keyboardMarkup.setKeyboard(keyboard);
+        keyboardMarkup.setResizeKeyboard(true);
+        keyboardMarkup.setOneTimeKeyboard(false);
+
+        message.setReplyMarkup(keyboardMarkup);
+
+        try {
+            execute(message);
+            logger.debug("Message sent to chat ID: {}", chatId);
+        } catch (TelegramApiException e) {
+            logger.error("Failed to send message to chat ID: {}", chatId, e);
         }
     }
 
-    private void completeRegistration(User user) {
-        user.setRegistrationState(User.RegistrationState.COMPLETED);
-        userService.updateUser(user);
-        sendMessageWithKeyboardRemove(user.getChatId(), "Регистрация завершена!");
-        sendMainMenu(user.getChatId());
+    private void sendMessageWithoutKeyboard(long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(text);
+
+        ReplyKeyboardRemove keyboardRemove = new ReplyKeyboardRemove();
+        keyboardRemove.setRemoveKeyboard(true);
+        message.setReplyMarkup(keyboardRemove);
+
+        try {
+            execute(message);
+            logger.debug("Message sent to chat ID: {}", chatId);
+        } catch (TelegramApiException e) {
+            logger.error("Failed to send message to chat ID: {}", chatId, e);
+        }
     }
 
     private void sendMainMenu(long chatId) {
@@ -237,6 +227,88 @@ public class MyTurnBot extends TelegramLongPollingBot {
         }
     }
 
+    private void completeRegistration(User user) {
+        user.setRegistrationState(User.RegistrationState.COMPLETED);
+        userService.updateUser(user);
+        sendMessageWithMenuButton(user.getChatId(), "Регистрация завершена! Теперь вы можете использовать кнопку 'Меню' для доступа к функциям бота.");
+    }
+
+    private void handleCallbackQuery(long chatId, String callData) {
+        User user = userService.getUserByChatId(chatId);
+        if (user == null) {
+            logger.error("User not found for chat ID: {}", chatId);
+            return;
+        }
+
+        switch (callData) {
+            case "SHOW_DOCTORS":
+                sendDoctorsList(chatId);
+                break;
+            case "MY_APPOINTMENTS":
+                sendUserAppointments(user);
+                break;
+            case "MY_PROFILE":
+                sendUserProfile(chatId);
+                break;
+            default:
+                if (callData.startsWith("DOCTOR_")) {
+                    Long doctorId = Long.parseLong(callData.split("_")[1]);
+                    sendDoctorDetails(chatId, doctorId);
+                } else if (callData.startsWith("BOOK_")) {
+                    Long doctorId = Long.parseLong(callData.split("_")[1]);
+                    handleBookingRequest(user, doctorId);
+                }
+                break;
+        }
+    }
+
+    private void sendUserProfile(long chatId) {
+        User user = userService.getUserByChatId(chatId);
+        if (user != null) {
+            String profileInfo = String.format("Ваш профиль:\nИмя: %s\nФамилия: %s\nТелефон: %s",
+                    user.getFirstName(), user.getLastName(), user.getPhoneNumber());
+            sendMessageWithMenuButton(chatId, profileInfo);
+        } else {
+            sendMessageWithMenuButton(chatId, "Ошибка: пользователь не найден.");
+        }
+    }
+
+    private void requestPhoneNumber(long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Пожалуйста, предоставьте ваш номер телефона, нажав на кнопку ниже или введите его вручную в формате +XXXXXXXXXXX.");
+
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        KeyboardRow row = new KeyboardRow();
+        KeyboardButton button = new KeyboardButton("Отправить номер телефона");
+        button.setRequestContact(true);
+        row.add(button);
+        keyboard.add(row);
+        keyboardMarkup.setKeyboard(keyboard);
+        keyboardMarkup.setOneTimeKeyboard(true);
+        keyboardMarkup.setResizeKeyboard(true);
+        message.setReplyMarkup(keyboardMarkup);
+
+        try {
+            execute(message);
+        } catch (TelegramApiException e) {
+            logger.error("Failed to send message to chat ID: {}", chatId, e);
+        }
+    }
+
+    private void processPhoneNumber(User user, String phoneNumber) {
+        if (user.getRegistrationState() == User.RegistrationState.AWAITING_PHONE_NUMBER) {
+            try {
+                authService.setPhoneNumber(user, phoneNumber);
+                completeRegistration(user);
+            } catch (IllegalArgumentException e) {
+                sendMessageWithoutKeyboard(user.getChatId(), "Неверный формат номера телефона. Пожалуйста, попробуйте еще раз.");
+                requestPhoneNumber(user.getChatId());
+            }
+        }
+    }
+
     private void sendDoctorsList(long chatId) {
         List<Doctor> doctors = doctorService.getAllDoctors();
         SendMessage message = new SendMessage();
@@ -264,7 +336,6 @@ public class MyTurnBot extends TelegramLongPollingBot {
             logger.error("Error sending doctors list", e);
         }
     }
-
     private void sendDoctorDetails(long chatId, Long doctorId) {
         Doctor doctor = doctorService.getDoctorById(doctorId);
         if (doctor != null) {
@@ -291,14 +362,14 @@ public class MyTurnBot extends TelegramLongPollingBot {
                 logger.error("Error sending doctor details", e);
             }
         } else {
-            sendMessage(chatId, "Врач не найден.");
+            sendMessageWithMenuButton(chatId, "Врач не найден.");
         }
     }
 
     private void handleBookingRequest(User user, Long doctorId) {
         Doctor doctor = doctorService.getDoctorById(doctorId);
         if (doctor == null) {
-            sendMessage(user.getChatId(), "Врач с указанным ID не найден.");
+            sendMessageWithMenuButton(user.getChatId(), "Врач с указанным ID не найден.");
             return;
         }
 
@@ -306,14 +377,14 @@ public class MyTurnBot extends TelegramLongPollingBot {
         LocalDateTime appointmentTime = LocalDateTime.now().plusDays(1).withHour(10).withMinute(0).withSecond(0).withNano(0);
 
         Appointment appointment = appointmentService.scheduleAppointment(user, doctor, appointmentTime);
-        sendMessage(user.getChatId(), "Вы успешно записаны к врачу " + doctor.getFirstName() + " " +
+        sendMessageWithMenuButton(user.getChatId(), "Вы успешно записаны к врачу " + doctor.getFirstName() + " " +
                 doctor.getLastName() + " на " + appointmentTime.format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")));
     }
 
     private void sendUserAppointments(User user) {
         List<Appointment> appointments = appointmentService.getUserAppointments(user);
         if (appointments.isEmpty()) {
-            sendMessage(user.getChatId(), "У вас нет запланированных приемов.");
+            sendMessageWithMenuButton(user.getChatId(), "У вас нет запланированных приемов.");
         } else {
             StringBuilder message = new StringBuilder("Ваши записи на прием:\n\n");
             for (Appointment appointment : appointments) {
@@ -322,7 +393,7 @@ public class MyTurnBot extends TelegramLongPollingBot {
                         .append("Время: ").append(appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))).append("\n")
                         .append("Статус: ").append(appointment.getStatus()).append("\n\n");
             }
-            sendMessage(user.getChatId(), message.toString());
+            sendMessageWithMenuButton(user.getChatId(), message.toString());
         }
     }
 
@@ -330,6 +401,18 @@ public class MyTurnBot extends TelegramLongPollingBot {
         SendMessage message = new SendMessage();
         message.setChatId(String.valueOf(chatId));
         message.setText(text);
+
+        ReplyKeyboardMarkup keyboardMarkup = new ReplyKeyboardMarkup();
+        List<KeyboardRow> keyboard = new ArrayList<>();
+        KeyboardRow row = new KeyboardRow();
+        row.add(new KeyboardButton("Начать"));
+        row.add(new KeyboardButton("Меню"));
+        keyboard.add(row);
+        keyboardMarkup.setKeyboard(keyboard);
+        keyboardMarkup.setResizeKeyboard(true);
+        keyboardMarkup.setOneTimeKeyboard(false);
+
+        message.setReplyMarkup(keyboardMarkup);
 
         try {
             execute(message);
