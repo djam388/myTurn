@@ -30,13 +30,6 @@ bot.token=your_bot_token
 
 Замените `your_bot_username` и `your_bot_token` на актуальные данные вашего Telegram бота.
 
-3. Соберите проект:
-
-mvn clean package
-
-4. Запустите приложение:
-   java -jar target/myTurn-0.0.1-SNAPSHOT.jar
-
 ## Использование
 
 1. Найдите бота в Telegram по имени, указанному в `bot.username`.
