@@ -21,6 +21,13 @@ public class Appointment {
     private Doctor doctor;
 
     private LocalDateTime appointmentTime;
+
     private Integer duration;
-    private String status; // e.g., "SCHEDULED", "COMPLETED", "CANCELLED"
+
+    @Enumerated(EnumType.STRING)
+    private AppointmentStatus status;
+
+    public enum AppointmentStatus {
+        SCHEDULED, COMPLETED, CANCELLED
+    }
 }

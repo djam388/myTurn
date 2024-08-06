@@ -5,9 +5,9 @@ import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 import jakarta.persistence.*;
-import javax.validation.constraints.Email;
-import javax.validation.constraints.NotBlank;
-import javax.validation.constraints.Pattern;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Pattern;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -77,6 +77,19 @@ public class Doctor {
     public void removeAppointment(Appointment appointment) {
         appointments.remove(appointment);
         appointment.setDoctor(null);
+    }
+
+    @Override
+    public String toString() {
+        return "Doctor{" +
+                "id=" + id +
+                ", firstName='" + firstName + '\'' +
+                ", lastName='" + lastName + '\'' +
+                ", specialization='" + specialization + '\'' +
+                ", phoneNumber='" + phoneNumber + '\'' +
+                ", email='" + email + '\'' +
+                ", isActive=" + isActive +
+                '}';
     }
 
     @Embeddable
