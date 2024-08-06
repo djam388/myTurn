@@ -114,11 +114,12 @@ public class AppointmentService {
         LocalDateTime startOfDay = selectedDate.atStartOfDay();
         LocalDateTime endOfDay = selectedDate.atTime(LocalTime.MAX);
 
-        List<Appointment> existingAppointments = appointmentRepository.findByDoctorAndAppointmentTimeBetween(doctor, startOfDay, endOfDay);
+        List<Appointment> existingAppointments = appointmentRepository.findByDoctorAndAppointmentTimeBetweenAndStatusNot(
+                doctor, startOfDay, endOfDay, Appointment.AppointmentStatus.CANCELLED);
 
-        Map<LocalTime, Boolean> timeSlots = new TreeMap<>(); // Using TreeMap for sorted keys
-        LocalTime startTime = LocalTime.of(9, 0); // Assuming work day starts at 9:00
-        LocalTime endTime = LocalTime.of(18, 0); // Assuming work day ends at 18:00
+        Map<LocalTime, Boolean> timeSlots = new TreeMap<>();
+        LocalTime startTime = LocalTime.of(9, 0);
+        LocalTime endTime = LocalTime.of(18, 0);
 
         while (startTime.isBefore(endTime)) {
             LocalDateTime slotDateTime = LocalDateTime.of(selectedDate, startTime);
@@ -132,7 +133,7 @@ public class AppointmentService {
                 timeSlots.put(startTime, isAvailable);
             }
 
-            startTime = startTime.plusHours(1); // Assuming 1-hour slots
+            startTime = startTime.plusHours(1);
         }
 
         return timeSlots;
@@ -146,9 +147,9 @@ public class AppointmentService {
     @Transactional
     public void cancelAppointment(Long appointmentId) {
         Appointment appointment = appointmentRepository.findById(appointmentId)
-                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+                .orElseThrow(() -> new RuntimeException("Запись не найдена"));
         appointment.setStatus(Appointment.AppointmentStatus.CANCELLED);
         appointmentRepository.save(appointment);
-        logger.info("Appointment cancelled: {}", appointment);
+        logger.info("Appointment cancelled: id={}", appointmentId);
     }
 }

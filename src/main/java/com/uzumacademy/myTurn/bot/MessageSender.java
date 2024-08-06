@@ -111,18 +111,44 @@ public class MessageSender {
     }
 
     public void sendUserAppointments(long chatId, List<Appointment> appointments) {
+
         if (appointments.isEmpty()) {
             sendMessageWithMenuButton(chatId, "У вас нет запланированных приемов.");
-        } else {
-            StringBuilder messageText = new StringBuilder("Ваши записи на прием:\n\n");
-            for (Appointment appointment : appointments) {
-                messageText.append("Врач: ").append(appointment.getDoctor().getFirstName())
-                        .append(" ").append(appointment.getDoctor().getLastName())
-                        .append("\nДата и время: ").append(appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
-                        .append("\nСтатус: ").append(appointment.getStatus())
-                        .append("\n\n");
-            }
-            sendMessageWithMenuButton(chatId, messageText.toString());
+            return;
+        }
+
+        sendMessage(chatId, "Ваши записи на прием:");
+        for (Appointment appointment : appointments) {
+            sendSingleAppointment(chatId, appointment);
+        }
+    }
+
+    private void sendSingleAppointment(long chatId, Appointment appointment) {
+        StringBuilder messageText = new StringBuilder("Запись на прием:\n\n");
+        messageText.append("Врач: ").append(appointment.getDoctor().getFirstName())
+                .append(" ").append(appointment.getDoctor().getLastName())
+                .append("\nДата и время: ").append(appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
+                .append("\nСтатус: ").append(appointment.getStatus());
+
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        cancelButton.setText("Отменить эту запись");
+        cancelButton.setCallbackData("CANCEL_APPOINTMENT_" + appointment.getId());
+        rowsInline.add(Collections.singletonList(cancelButton));
+
+        markupInline.setKeyboard(rowsInline);
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(messageText.toString());
+        message.setReplyMarkup(markupInline);
+
+        try {
+            bot.execute(message);
+        } catch (TelegramApiException e) {
+            logger.error("Failed to send single appointment message", e);
         }
     }
 
@@ -155,6 +181,38 @@ public class MessageSender {
             bot.execute(message);
         } catch (TelegramApiException e) {
             logger.error("Failed to send message", e);
+        }
+    }
+
+    public void sendUserAppointmentsWithCancelOption(long chatId, List<Appointment> appointments) {
+        StringBuilder messageText = new StringBuilder("Ваши записи на прием:\n\n");
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        for (Appointment appointment : appointments) {
+            messageText.append("Врач: ").append(appointment.getDoctor().getFirstName())
+                    .append(" ").append(appointment.getDoctor().getLastName())
+                    .append("\nДата и время: ").append(appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
+                    .append("\nСтатус: ").append(appointment.getStatus())
+                    .append("\n\n");
+
+            InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+            cancelButton.setText("Отменить запись");
+            cancelButton.setCallbackData("CANCEL_APPOINTMENT_" + appointment.getId());
+            rowsInline.add(Collections.singletonList(cancelButton));
+        }
+
+        markupInline.setKeyboard(rowsInline);
+
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(messageText.toString());
+        message.setReplyMarkup(markupInline);
+
+        try {
+            bot.execute(message);
+        } catch (TelegramApiException e) {
+            logger.error("Failed to send user appointments message", e);
         }
     }
 

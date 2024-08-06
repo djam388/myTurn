@@ -117,6 +117,15 @@ public class MenuHandler {
                         messageSender.sendMessageWithMenuButton(chatId, "Неизвестная команда.");
                     }
                     break;
+                case "CANCEL":
+                    if (parts.length > 2 && "APPOINTMENT".equals(parts[1])) {
+                        Long appointmentId = Long.parseLong(parts[2]);
+                        appointmentHandler.handleAppointmentCancellation(user, appointmentId);
+                    } else {
+                        logger.warn("Invalid CANCEL_APPOINTMENT callback data: {}", callData);
+                        messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для отмены записи.");
+                    }
+                    break;
 
                 default:
                     logger.warn("Unknown callback query: {}", callData);

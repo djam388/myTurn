@@ -92,7 +92,15 @@ public class AppointmentHandler {
     public void handleAppointmentCancellation(User user, Long appointmentId) {
         try {
             appointmentService.cancelAppointment(appointmentId);
-            messageSender.sendMessageWithMenuButton(user.getChatId(), "Запись успешно отменена.");
+            messageSender.sendMessage(user.getChatId(), "Запись успешно отменена.");
+
+            // Получаем обновленный список записей и отправляем его пользователю
+            List<Appointment> updatedAppointments = appointmentService.getCurrentAndFutureUserAppointments(user);
+            if (updatedAppointments.isEmpty()) {
+                messageSender.sendMessageWithMenuButton(user.getChatId(), "У вас нет запланированных приемов.");
+            } else {
+                messageSender.sendUserAppointments(user.getChatId(), updatedAppointments);
+            }
         } catch (RuntimeException e) {
             logger.error("Error cancelling appointment", e);
             messageSender.sendMessageWithMenuButton(user.getChatId(), "Ошибка при отмене записи. Пожалуйста, попробуйте позже.");
