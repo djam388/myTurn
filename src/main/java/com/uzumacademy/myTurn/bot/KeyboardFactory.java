@@ -11,9 +11,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class KeyboardFactory {
@@ -56,13 +54,15 @@ public class KeyboardFactory {
     public InlineKeyboardMarkup createDateSelectionKeyboard(List<LocalDate> availableDates, Long doctorId) {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+
+        DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
         for (LocalDate date : availableDates) {
-            rowsInline.add(List.of(InlineKeyboardButton.builder()
-                    .text(date.format(formatter))
-                    .callbackData("DATE_" + doctorId + "_" + date.format(formatter))
-                    .build()));
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(date.format(displayFormatter));
+            button.setCallbackData("DATE_" + doctorId + "_" + date.toString());
+            rowsInline.add(Collections.singletonList(button));
         }
+
         markupInline.setKeyboard(rowsInline);
         return markupInline;
     }
@@ -70,19 +70,20 @@ public class KeyboardFactory {
     public InlineKeyboardMarkup createTimeSelectionKeyboard(Map<LocalTime, Boolean> timeSlots, Long doctorId, LocalDate selectedDate) {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
         for (Map.Entry<LocalTime, Boolean> entry : timeSlots.entrySet()) {
-            LocalTime time = entry.getKey();
-            Boolean isAvailable = entry.getValue();
             InlineKeyboardButton button = new InlineKeyboardButton();
-            button.setText(time.format(formatter));
-            if (isAvailable) {
-                button.setCallbackData("TIME_" + doctorId + "_" + selectedDate + "_" + time.format(formatter));
+            if (entry.getValue()) {
+                button.setText(entry.getKey().format(formatter));
+                button.setCallbackData("TIME_" + doctorId + "_" + selectedDate + "_" + entry.getKey());
             } else {
+                button.setText(entry.getKey().format(formatter) + " (занято)");
                 button.setCallbackData("UNAVAILABLE");
             }
-            rowsInline.add(List.of(button));
+            rowsInline.add(Collections.singletonList(button));
         }
+
         markupInline.setKeyboard(rowsInline);
         return markupInline;
     }
@@ -99,5 +100,76 @@ public class KeyboardFactory {
         keyboardMarkup.setResizeKeyboard(true);
         keyboardMarkup.setOneTimeKeyboard(true);
         return keyboardMarkup;
+    }
+
+    public InlineKeyboardMarkup createDateSelectionKeyboardForReschedule(List<LocalDate> availableDates, Long appointmentId) {
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        for (LocalDate date : availableDates) {
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(date.format(formatter));
+            button.setCallbackData("RESCHEDULE_DATE_" + appointmentId + "_" + date);
+            rowsInline.add(Collections.singletonList(button));
+        }
+
+        markupInline.setKeyboard(rowsInline);
+        return markupInline;
+    }
+
+    public InlineKeyboardMarkup createTimeSelectionKeyboardForReschedule(Map<LocalTime, Boolean> timeSlots, Long appointmentId, LocalDate selectedDate) {
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        for (Map.Entry<LocalTime, Boolean> entry : timeSlots.entrySet()) {
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            button.setText(entry.getKey().format(formatter));
+            if (entry.getValue()) {
+                button.setCallbackData("RESCHEDULE_TIME_" + appointmentId + "_" + selectedDate + "_" + entry.getKey());
+            } else {
+                button.setCallbackData("UNAVAILABLE_TIME");
+            }
+            rowsInline.add(Collections.singletonList(button));
+        }
+
+        markupInline.setKeyboard(rowsInline);
+        return markupInline;
+    }
+
+    public InlineKeyboardMarkup createAppointmentActionsKeyboard(Long appointmentId) {
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        InlineKeyboardButton rescheduleButton = new InlineKeyboardButton();
+        rescheduleButton.setText("Перенести запись");
+        rescheduleButton.setCallbackData("RESCHEDULE_APPOINTMENT_" + appointmentId);
+
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        cancelButton.setText("Отменить запись");
+        cancelButton.setCallbackData("CANCEL_APPOINTMENT_" + appointmentId);
+
+        rowsInline.add(Arrays.asList(rescheduleButton, cancelButton));
+        markupInline.setKeyboard(rowsInline);
+        return markupInline;
+    }
+
+
+    public InlineKeyboardMarkup createRescheduleConfirmationKeyboard(Long appointmentId) {
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        InlineKeyboardButton confirmButton = new InlineKeyboardButton();
+        confirmButton.setText("Подтвердить перенос");
+        confirmButton.setCallbackData("RESCHEDULE_CONFIRM_" + appointmentId);
+
+        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
+        cancelButton.setText("Отменить перенос");
+        cancelButton.setCallbackData("RESCHEDULE_CANCEL_" + appointmentId);
+
+        rowsInline.add(Arrays.asList(confirmButton, cancelButton));
+        markupInline.setKeyboard(rowsInline);
+        return markupInline;
     }
 }

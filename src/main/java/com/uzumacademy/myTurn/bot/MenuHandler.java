@@ -11,7 +11,6 @@ import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.CallbackQuery;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
@@ -88,19 +87,20 @@ public class MenuHandler {
                     break;
                 case "DATE":
                     if (parts.length > 2) {
-                        LocalDate selectedDate = LocalDate.parse(parts[2], DATE_FORMATTER);
-                        appointmentHandler.handleDateSelection(user, Long.parseLong(parts[1]), selectedDate);
+                        Long id = Long.parseLong(parts[1]);
+                        LocalDate selectedDate = LocalDate.parse(parts[2]);
+                        appointmentHandler.handleDateSelection(user, id, selectedDate, false);
                     } else {
                         logger.warn("Invalid DATE callback data: {}", callData);
                         messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для выбора даты.");
                     }
                     break;
-
                 case "TIME":
                     if (parts.length > 3) {
                         LocalDate selectedDate = LocalDate.parse(parts[2], DateTimeFormatter.ISO_LOCAL_DATE);
                         LocalTime selectedTime = LocalTime.parse(parts[3], DateTimeFormatter.ofPattern("HH:mm"));
-                        appointmentHandler.handleTimeSelection(user, Long.parseLong(parts[1]), selectedDate, selectedTime);
+                        boolean isReschedule = parts[0].equals("RESCHEDULE_TIME");
+                        appointmentHandler.handleTimeSelection(user, Long.parseLong(parts[1]), selectedDate, selectedTime, isReschedule);
                     } else {
                         logger.warn("Invalid TIME callback data: {}", callData);
                         messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для выбора времени.");
@@ -110,12 +110,7 @@ public class MenuHandler {
                     messageSender.sendMessageWithMenuButton(chatId, "Это время уже занято. Пожалуйста, выберите другое время.");
                     break;
                 case "UNAVAILABLE":
-                    if ("UNAVAILABLE_TIME".equals(callData)) {
-                        messageSender.sendMessage(chatId, "Это время уже занято. Пожалуйста, выберите другое время.");
-                    } else {
-                        logger.warn("Unknown UNAVAILABLE action: {}", callData);
-                        messageSender.sendMessageWithMenuButton(chatId, "Неизвестная команда.");
-                    }
+                    messageSender.sendMessage(chatId, "Это время уже занято. Пожалуйста, выберите другое время.");
                     break;
                 case "CANCEL":
                     if (parts.length > 2 && "APPOINTMENT".equals(parts[1])) {
@@ -126,10 +121,62 @@ public class MenuHandler {
                         messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для отмены записи.");
                     }
                     break;
-
-                default:
-                    logger.warn("Unknown callback query: {}", callData);
-                    messageSender.sendMessageWithMenuButton(chatId, "Неизвестная команда.");
+                case "RESCHEDULE":
+                    if (callData.startsWith("RESCHEDULE_APPOINTMENT_")) {
+                        String[] rescheduleParts = callData.split("_");
+                        if (rescheduleParts.length == 3) {
+                            try {
+                                Long appointmentId = Long.parseLong(rescheduleParts[2]);
+                                appointmentHandler.startRescheduleProcess(user, appointmentId);
+                            } catch (NumberFormatException e) {
+                                logger.error("Error parsing appointment id for reschedule: {}", callData, e);
+                                messageSender.sendMessageWithMenuButton(chatId, "Ошибка при обработке данных для переноса записи. Пожалуйста, попробуйте еще раз.");
+                            }
+                        } else {
+                            logger.warn("Invalid RESCHEDULE_APPOINTMENT callback data: {}", callData);
+                            messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для переноса записи.");
+                        }
+                    } else if (callData.startsWith("RESCHEDULE_DATE_")) {
+                        String[] rescheduleParts = callData.split("_");
+                        if (rescheduleParts.length == 4) {
+                            try {
+                                Long appointmentId = Long.parseLong(rescheduleParts[2]);
+                                LocalDate newDate = LocalDate.parse(rescheduleParts[3]);
+                                appointmentHandler.handleRescheduleDateSelection(user, appointmentId, newDate);
+                            } catch (NumberFormatException | DateTimeParseException e) {
+                                logger.error("Error parsing reschedule date data: {}", callData, e);
+                                messageSender.sendMessageWithMenuButton(chatId, "Ошибка при обработке даты для переноса записи. Пожалуйста, попробуйте еще раз.");
+                            } catch (Exception e) {
+                                logger.error("Error handling reschedule date selection", e);
+                                messageSender.sendMessageWithMenuButton(chatId, "Произошла ошибка при выборе даты для переноса записи. Пожалуйста, попробуйте еще раз.");
+                            }
+                        } else {
+                            logger.warn("Invalid RESCHEDULE_DATE callback data: {}", callData);
+                            messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для переноса записи.");
+                        }
+                    } else if (callData.startsWith("RESCHEDULE_TIME_")) {
+                        String[] rescheduleParts = callData.split("_");
+                        if (rescheduleParts.length == 5) {
+                            try {
+                                Long appointmentId = Long.parseLong(rescheduleParts[2]);
+                                LocalDate newDate = LocalDate.parse(rescheduleParts[3]);
+                                LocalTime newTime = LocalTime.parse(rescheduleParts[4]);
+                                appointmentHandler.handleTimeSelection(user, appointmentId, newDate, newTime, true);
+                            } catch (NumberFormatException | DateTimeParseException e) {
+                                logger.error("Error parsing reschedule time data: {}", callData, e);
+                                messageSender.sendMessageWithMenuButton(chatId, "Ошибка при обработке времени для переноса записи. Пожалуйста, попробуйте еще раз.");
+                            } catch (Exception e) {
+                                logger.error("Error handling reschedule time selection", e);
+                                messageSender.sendMessageWithMenuButton(chatId, "Произошла ошибка при выборе времени для переноса записи. Пожалуйста, попробуйте еще раз.");
+                            }
+                        } else {
+                            logger.warn("Invalid RESCHEDULE_TIME callback data: {}", callData);
+                            messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для переноса записи.");
+                        }
+                    } else {
+                        logger.warn("Unknown RESCHEDULE action: {}", callData);
+                        messageSender.sendMessageWithMenuButton(chatId, "Неизвестная команда для переноса записи.");
+                    }
                     break;
             }
         } catch (DateTimeParseException e) {
@@ -155,5 +202,9 @@ public class MenuHandler {
         } else {
             messageSender.sendMessageWithMenuButton(chatId, "Ошибка: пользователь не найден.");
         }
+    }
+
+    private void handleAppointmentReschedule(User user, Long appointmentId) {
+        appointmentHandler.startRescheduleProcess(user, appointmentId);
     }
 }

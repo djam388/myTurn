@@ -31,5 +31,16 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Query("SELECT a FROM Appointment a WHERE a.user = :user AND a.appointmentTime >= :currentTime AND a.status != 'CANCELLED' ORDER BY a.appointmentTime ASC")
     List<Appointment> findCurrentAndFutureAppointmentsByUser(@Param("user") User user, @Param("currentTime") LocalDateTime currentTime);
 
+    @Query("SELECT a FROM Appointment a WHERE a.id = :appointmentId AND a.appointmentTime > :twoDateBeforeAppointment")
+    Optional<Appointment> findReschedulableAppointment(@Param("appointmentId") Long appointmentId, @Param("twoDateBeforeAppointment") LocalDateTime twoDateBeforeAppointment);
+
+    Optional<Appointment> findById(Long id);
+
     List<Appointment> findByDoctorAndAppointmentTimeBetweenAndStatusNot(Doctor doctor, LocalDateTime start, LocalDateTime end, Appointment.AppointmentStatus status);
+
+    Optional<Appointment> findByDoctorAndAppointmentTimeAndStatusNot(Doctor doctor, LocalDateTime appointmentTime, Appointment.AppointmentStatus status);
+
+    List<Appointment> findByDoctorAndAppointmentTimeBetweenAndStatus(Doctor doctor, LocalDateTime start, LocalDateTime end, Appointment.AppointmentStatus status);
+
+
 }

@@ -30,4 +30,20 @@ public class Appointment {
     public enum AppointmentStatus {
         SCHEDULED, COMPLETED, CANCELLED
     }
+
+    @Column(name = "last_rescheduled_at")
+    private LocalDateTime lastRescheduledAt;
+
+    @Column(name = "reschedule_count")
+    private int rescheduleCount = 0;
+
+    public boolean canBeRescheduled() {
+        return this.appointmentTime.minusDays(2).isAfter(LocalDateTime.now());
+    }
+
+    public void reschedule(LocalDateTime newAppointmentTime) {
+        this.lastRescheduledAt = LocalDateTime.now();
+        this.rescheduleCount++;
+        this.appointmentTime = newAppointmentTime;
+    }
 }

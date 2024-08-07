@@ -1,22 +1,18 @@
 package com.uzumacademy.myTurn.bot;
 
-import com.uzumacademy.myTurn.model.Doctor;
 import com.uzumacademy.myTurn.model.Appointment;
+import com.uzumacademy.myTurn.model.Doctor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardRemove;
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton;
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -32,23 +28,9 @@ public class MessageSender {
         this.keyboardFactory = keyboardFactory;
     }
 
-    public void sendMessageWithStartButton(long chatId, String text) {
-        SendMessage message = createMessage(chatId, text);
-        message.setReplyMarkup(keyboardFactory.createSingleButtonKeyboard("Начать"));
-        executeMessage(message);
-    }
-
     public void sendMessageWithMenuButton(long chatId, String text) {
         SendMessage message = createMessage(chatId, text);
         message.setReplyMarkup(keyboardFactory.createSingleButtonKeyboard("Меню"));
-        executeMessage(message);
-    }
-
-    public void sendMessageWithoutKeyboard(long chatId, String text) {
-        SendMessage message = createMessage(chatId, text);
-        ReplyKeyboardRemove keyboardRemove = new ReplyKeyboardRemove();
-        keyboardRemove.setRemoveKeyboard(true);
-        message.setReplyMarkup(keyboardRemove);
         executeMessage(message);
     }
 
@@ -71,47 +53,15 @@ public class MessageSender {
     }
 
     public void sendAvailableTimeSlots(long chatId, Doctor doctor, LocalDate selectedDate, Map<LocalTime, Boolean> timeSlots) {
-        StringBuilder message = new StringBuilder("Выберите время приема:\n");
-        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        String messageText = "Выберите время приема на " + selectedDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ":";
+        InlineKeyboardMarkup keyboard = keyboardFactory.createTimeSelectionKeyboard(timeSlots, doctor.getId(), selectedDate);
 
-        for (Map.Entry<LocalTime, Boolean> entry : timeSlots.entrySet()) {
-            LocalTime time = entry.getKey();
-            boolean isAvailable = entry.getValue();
-
-            String buttonText = time.format(DateTimeFormatter.ofPattern("HH:mm"));
-            if (!isAvailable) {
-                buttonText += " (занято)";
-            }
-
-            InlineKeyboardButton button = new InlineKeyboardButton();
-            button.setText(buttonText);
-
-            if (isAvailable) {
-                button.setCallbackData("TIME_" + doctor.getId() + "_" + selectedDate + "_" + time);
-            } else {
-                button.setCallbackData("UNAVAILABLE_TIME");
-            }
-
-            rowsInline.add(Collections.singletonList(button));
-        }
-
-        markupInline.setKeyboard(rowsInline);
-
-        SendMessage sendMessage = new SendMessage();
-        sendMessage.setChatId(String.valueOf(chatId));
-        sendMessage.setText(message.toString());
-        sendMessage.setReplyMarkup(markupInline);
-
-        try {
-            bot.execute(sendMessage);
-        } catch (TelegramApiException e) {
-            logger.error("Failed to send available time slots message", e);
-        }
+        SendMessage message = createMessage(chatId, messageText);
+        message.setReplyMarkup(keyboard);
+        executeMessage(message);
     }
 
     public void sendUserAppointments(long chatId, List<Appointment> appointments) {
-
         if (appointments.isEmpty()) {
             sendMessageWithMenuButton(chatId, "У вас нет запланированных приемов.");
             return;
@@ -123,33 +73,18 @@ public class MessageSender {
         }
     }
 
-    private void sendSingleAppointment(long chatId, Appointment appointment) {
+    public void sendSingleAppointment(long chatId, Appointment appointment) {
         StringBuilder messageText = new StringBuilder("Запись на прием:\n\n");
         messageText.append("Врач: ").append(appointment.getDoctor().getFirstName())
                 .append(" ").append(appointment.getDoctor().getLastName())
                 .append("\nДата и время: ").append(appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
                 .append("\nСтатус: ").append(appointment.getStatus());
 
-        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+        InlineKeyboardMarkup keyboard = keyboardFactory.createAppointmentActionsKeyboard(appointment.getId());
 
-        InlineKeyboardButton cancelButton = new InlineKeyboardButton();
-        cancelButton.setText("Отменить эту запись");
-        cancelButton.setCallbackData("CANCEL_APPOINTMENT_" + appointment.getId());
-        rowsInline.add(Collections.singletonList(cancelButton));
-
-        markupInline.setKeyboard(rowsInline);
-
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
-        message.setReplyMarkup(markupInline);
-
-        try {
-            bot.execute(message);
-        } catch (TelegramApiException e) {
-            logger.error("Failed to send single appointment message", e);
-        }
+        SendMessage message = createMessage(chatId, messageText.toString());
+        message.setReplyMarkup(keyboard);
+        executeMessage(message);
     }
 
     public void sendAppointmentConfirmation(long chatId, Appointment appointment) {
@@ -160,9 +95,48 @@ public class MessageSender {
         sendMessageWithMenuButton(chatId, message);
     }
 
-    public void requestPhoneNumber(Long chatId) {
-        SendMessage message = createMessage(chatId, "Пожалуйста, предоставьте ваш номер телефона, нажав на кнопку ниже или введите его вручную в формате +XXXXXXXXXXX.");
-        message.setReplyMarkup(keyboardFactory.createPhoneNumberKeyboard());
+    public void sendAvailableDatesForReschedule(long chatId, Appointment appointment, List<LocalDate> availableDates) {
+        String message = "Выберите новую дату для переноса записи:";
+        InlineKeyboardMarkup keyboard = keyboardFactory.createDateSelectionKeyboardForReschedule(availableDates, appointment.getId());
+
+        SendMessage sendMessage = createMessage(chatId, message);
+        sendMessage.setReplyMarkup(keyboard);
+        executeMessage(sendMessage);
+    }
+
+    public void sendAvailableTimeSlotsForReschedule(long chatId, Appointment appointment, LocalDate selectedDate, Map<LocalTime, Boolean> timeSlots) {
+        String message = "Выберите новое время для переноса записи на " + selectedDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ":";
+        InlineKeyboardMarkup keyboard = keyboardFactory.createTimeSelectionKeyboardForReschedule(timeSlots, appointment.getId(), selectedDate);
+
+        SendMessage sendMessage = createMessage(chatId, message);
+        sendMessage.setReplyMarkup(keyboard);
+        executeMessage(sendMessage);
+    }
+
+    public void sendRescheduleConfirmation(long chatId, Appointment rescheduledAppointment) {
+        String message = String.format("Запись успешно перенесена!\n\nНовое время приема: %s\nВрач: %s %s",
+                rescheduledAppointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
+                rescheduledAppointment.getDoctor().getFirstName(),
+                rescheduledAppointment.getDoctor().getLastName());
+
+        sendMessageWithMenuButton(chatId, message);
+    }
+
+    public void sendRescheduleConfirmationMessage(long chatId, Appointment appointment) {
+        String message = String.format("Вы уверены, что хотите перенести запись?\n\nТекущее время приема: %s\nВрач: %s %s",
+                appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
+                appointment.getDoctor().getFirstName(),
+                appointment.getDoctor().getLastName());
+
+        InlineKeyboardMarkup keyboard = keyboardFactory.createRescheduleConfirmationKeyboard(appointment.getId());
+
+        SendMessage sendMessage = createMessage(chatId, message);
+        sendMessage.setReplyMarkup(keyboard);
+        executeMessage(sendMessage);
+    }
+
+    public void sendMessage(long chatId, String text) {
+        SendMessage message = createMessage(chatId, text);
         executeMessage(message);
     }
 
@@ -173,54 +147,33 @@ public class MessageSender {
         return message;
     }
 
-    public void sendMessage(long chatId, String text) {
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(text);
-        try {
-            bot.execute(message);
-        } catch (TelegramApiException e) {
-            logger.error("Failed to send message", e);
-        }
-    }
-
-    public void sendUserAppointmentsWithCancelOption(long chatId, List<Appointment> appointments) {
-        StringBuilder messageText = new StringBuilder("Ваши записи на прием:\n\n");
-        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-
-        for (Appointment appointment : appointments) {
-            messageText.append("Врач: ").append(appointment.getDoctor().getFirstName())
-                    .append(" ").append(appointment.getDoctor().getLastName())
-                    .append("\nДата и время: ").append(appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
-                    .append("\nСтатус: ").append(appointment.getStatus())
-                    .append("\n\n");
-
-            InlineKeyboardButton cancelButton = new InlineKeyboardButton();
-            cancelButton.setText("Отменить запись");
-            cancelButton.setCallbackData("CANCEL_APPOINTMENT_" + appointment.getId());
-            rowsInline.add(Collections.singletonList(cancelButton));
-        }
-
-        markupInline.setKeyboard(rowsInline);
-
-        SendMessage message = new SendMessage();
-        message.setChatId(String.valueOf(chatId));
-        message.setText(messageText.toString());
-        message.setReplyMarkup(markupInline);
-
-        try {
-            bot.execute(message);
-        } catch (TelegramApiException e) {
-            logger.error("Failed to send user appointments message", e);
-        }
-    }
-
     private void executeMessage(SendMessage message) {
         try {
             bot.execute(message);
         } catch (TelegramApiException e) {
             logger.error("Failed to send message", e);
         }
+    }
+
+    public void sendMessageWithStartButton(long chatId, String text) {
+        SendMessage message = createMessage(chatId, text);
+        message.setReplyMarkup(keyboardFactory.createSingleButtonKeyboard("Начать"));
+        executeMessage(message);
+    }
+
+    public void sendMessageWithoutKeyboard(long chatId, String text) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText(text);
+        message.setReplyMarkup(new ReplyKeyboardRemove(true));
+        executeMessage(message);
+    }
+
+    public void requestPhoneNumber(Long chatId) {
+        SendMessage message = new SendMessage();
+        message.setChatId(String.valueOf(chatId));
+        message.setText("Пожалуйста, предоставьте ваш номер телефона, нажав на кнопку ниже или введите его вручную в формате +XXXXXXXXXXX.");
+        message.setReplyMarkup(keyboardFactory.createPhoneNumberKeyboard());
+        executeMessage(message);
     }
 }
