@@ -42,8 +42,9 @@ public class AppointmentHandler {
         }
 
         LocalDate currentDate = LocalDate.now();
-        List<LocalDate> availableDates = appointmentService.getAvailableDates(doctor, currentDate, currentDate.plusDays(7));
-        messageSender.sendAvailableDates(user.getChatId(), doctor, availableDates);
+        List<LocalDate> availableDates = appointmentService.getAvailableDates(doctor, currentDate, currentDate.plusDays(appointmentService.getInitialBookingDaysAhead()));
+
+        messageSender.sendAvailableDatesWithBack(user.getChatId(), doctor, availableDates);
     }
 
     public void handleDateSelection(User user, Long id, LocalDate selectedDate, boolean isReschedule) {
@@ -56,7 +57,7 @@ public class AppointmentHandler {
                 return;
             }
             Map<LocalTime, Boolean> availableTimeSlots = appointmentService.getAvailableTimeSlots(doctor, selectedDate);
-            messageSender.sendAvailableTimeSlots(user.getChatId(), doctor, selectedDate, availableTimeSlots);
+            messageSender.sendAvailableTimeSlotsWithBack(user.getChatId(), doctor, selectedDate, availableTimeSlots);
         }
     }
 
@@ -170,13 +171,22 @@ public class AppointmentHandler {
                 return;
             }
 
+            if (appointment.getStatus() == Appointment.AppointmentStatus.CANCELLED) {
+                messageSender.sendMessageWithMenuButton(user.getChatId(), "Невозможно перенести отмененную запись. Пожалуйста, создайте новую запись.");
+                return;
+            }
+
             if (!appointment.canBeRescheduled()) {
                 messageSender.sendMessageWithMenuButton(user.getChatId(), "Эту запись нельзя перенести, так как до приема осталось менее 2 дней.");
                 return;
             }
 
             LocalDate currentDate = LocalDate.now();
-            List<LocalDate> availableDates = appointmentService.getAvailableDates(appointment.getDoctor(), currentDate.plusDays(2), currentDate.plusDays(30));
+            List<LocalDate> availableDates = appointmentService.getAvailableDates(
+                    appointment.getDoctor(),
+                    currentDate.plusDays(appointmentService.getRescheduleMinDaysAhead()),
+                    currentDate.plusDays(appointmentService.getRescheduleMaxDaysAhead())
+            );
             messageSender.sendAvailableDatesForReschedule(user.getChatId(), appointment, availableDates);
         } catch (Exception e) {
             logger.error("Error starting reschedule process", e);

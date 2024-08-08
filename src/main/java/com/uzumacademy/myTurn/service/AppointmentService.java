@@ -5,11 +5,15 @@ import com.uzumacademy.myTurn.model.Doctor;
 import com.uzumacademy.myTurn.model.User;
 import com.uzumacademy.myTurn.repository.AppointmentRepository;
 import javax.persistence.EntityNotFoundException;
+
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -25,6 +29,18 @@ public class AppointmentService {
     private static final Logger logger = LoggerFactory.getLogger(AppointmentService.class);
 
     private final AppointmentRepository appointmentRepository;
+
+    @Getter
+    @Value("${appointment.initial-booking-days-ahead}")
+    private int initialBookingDaysAhead;
+
+    @Getter
+    @Value("${appointment.reschedule-min-days-ahead}")
+    private int rescheduleMinDaysAhead;
+
+    @Getter
+    @Value("${appointment.reschedule-max-days-ahead}")
+    private int rescheduleMaxDaysAhead;
 
     @Autowired
     public AppointmentService(AppointmentRepository appointmentRepository) {

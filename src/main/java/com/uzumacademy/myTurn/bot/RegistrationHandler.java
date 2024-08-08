@@ -69,5 +69,6 @@ public class RegistrationHandler {
         user.setRegistrationState(User.RegistrationState.COMPLETED);
         userService.updateUser(user);
         messageSender.sendMessageWithMenuButton(user.getChatId(), "Регистрация завершена! Теперь вы можете использовать кнопку 'Меню' для доступа к функциям бота.");
+        messageSender.sendMainMenu(user.getChatId());
     }
 }

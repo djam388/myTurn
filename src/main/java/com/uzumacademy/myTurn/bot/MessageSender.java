@@ -35,27 +35,40 @@ public class MessageSender {
     }
 
     public void sendMainMenu(long chatId) {
-        SendMessage message = createMessage(chatId, "Выберите действие:");
+        SendMessage message = createMessage(chatId, "Главное меню:");
         message.setReplyMarkup(keyboardFactory.createMainMenuKeyboard());
         executeMessage(message);
     }
 
     public void sendDoctorsList(long chatId, List<Doctor> doctors) {
+        sendDoctorsListWithBackButton(chatId, doctors);
+    }
+
+    public void sendDoctorsListWithBackButton(long chatId, List<Doctor> doctors) {
         SendMessage message = createMessage(chatId, "Выберите врача:");
-        message.setReplyMarkup(keyboardFactory.createDoctorsListKeyboard(doctors));
+        message.setReplyMarkup(keyboardFactory.createDoctorsListKeyboardWithBack(doctors));
         executeMessage(message);
     }
 
     public void sendAvailableDates(long chatId, Doctor doctor, List<LocalDate> availableDates) {
-        SendMessage message = createMessage(chatId, "Выберите дату приема:");
-        message.setReplyMarkup(keyboardFactory.createDateSelectionKeyboard(availableDates, doctor.getId()));
-        executeMessage(message);
+        sendAvailableDatesWithBack(chatId, doctor, availableDates);
+    }
+
+    public void sendAvailableDatesWithBack(long chatId, Doctor doctor, List<LocalDate> availableDates) {
+        String message = "Выберите дату приема к врачу " + doctor.getFirstName() + " " + doctor.getLastName() + ":";
+        InlineKeyboardMarkup keyboard = keyboardFactory.createDateSelectionKeyboardWithBack(availableDates, doctor.getId());
+        SendMessage sendMessage = createMessage(chatId, message);
+        sendMessage.setReplyMarkup(keyboard);
+        executeMessage(sendMessage);
     }
 
     public void sendAvailableTimeSlots(long chatId, Doctor doctor, LocalDate selectedDate, Map<LocalTime, Boolean> timeSlots) {
-        String messageText = "Выберите время приема на " + selectedDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ":";
-        InlineKeyboardMarkup keyboard = keyboardFactory.createTimeSelectionKeyboard(timeSlots, doctor.getId(), selectedDate);
+        sendAvailableTimeSlotsWithBack(chatId, doctor, selectedDate, timeSlots);
+    }
 
+    public void sendAvailableTimeSlotsWithBack(long chatId, Doctor doctor, LocalDate selectedDate, Map<LocalTime, Boolean> timeSlots) {
+        String messageText = "Выберите время приема на " + selectedDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ":";
+        InlineKeyboardMarkup keyboard = keyboardFactory.createTimeSelectionKeyboardWithBack(timeSlots, doctor.getId(), selectedDate);
         SendMessage message = createMessage(chatId, messageText);
         message.setReplyMarkup(keyboard);
         executeMessage(message);
@@ -63,14 +76,15 @@ public class MessageSender {
 
     public void sendUserAppointments(long chatId, List<Appointment> appointments) {
         if (appointments.isEmpty()) {
-            sendMessageWithMenuButton(chatId, "У вас нет запланированных приемов.");
+            sendMessageWithBackButton(chatId, "У вас нет запланированных приемов.");
             return;
         }
 
-        sendMessage(chatId, "Ваши записи на прием:");
         for (Appointment appointment : appointments) {
             sendSingleAppointment(chatId, appointment);
         }
+
+        sendMessageWithBackButton(chatId, "Для возврата в главное меню нажмите кнопку ниже:");
     }
 
     public void sendSingleAppointment(long chatId, Appointment appointment) {
@@ -80,32 +94,43 @@ public class MessageSender {
                 .append("\nДата и время: ").append(appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")))
                 .append("\nСтатус: ").append(appointment.getStatus());
 
-        InlineKeyboardMarkup keyboard = keyboardFactory.createAppointmentActionsKeyboard(appointment.getId());
+        InlineKeyboardMarkup keyboard = keyboardFactory.createAppointmentActionsKeyboard(appointment);
 
         SendMessage message = createMessage(chatId, messageText.toString());
         message.setReplyMarkup(keyboard);
         executeMessage(message);
     }
 
+    public void sendMessageWithBackButton(long chatId, String text) {
+        SendMessage message = createMessage(chatId, text);
+        message.setReplyMarkup(keyboardFactory.createBackButton());
+        executeMessage(message);
+    }
+
     public void sendAppointmentConfirmation(long chatId, Appointment appointment) {
-        String message = String.format("Запись подтверждена!\n\nВрач: %s %s\nДата и время: %s",
+        String message = String.format("Запись подтверждена!\n\nВрач: %s %s\nДата и время: %s\n\nЧто бы вы хотели сделать дальше?",
                 appointment.getDoctor().getFirstName(),
                 appointment.getDoctor().getLastName(),
                 appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")));
-        sendMessageWithMenuButton(chatId, message);
+
+        SendMessage sendMessage = createMessage(chatId, message);
+        sendMessage.setReplyMarkup(keyboardFactory.createMainMenuKeyboard());
+        executeMessage(sendMessage);
     }
 
     public void sendAvailableDatesForReschedule(long chatId, Appointment appointment, List<LocalDate> availableDates) {
-        String message = "Выберите новую дату для переноса записи:";
+        String message = String.format("Выберите новую дату для переноса записи к врачу %s %s:",
+                appointment.getDoctor().getFirstName(), appointment.getDoctor().getLastName());
         InlineKeyboardMarkup keyboard = keyboardFactory.createDateSelectionKeyboardForReschedule(availableDates, appointment.getId());
-
         SendMessage sendMessage = createMessage(chatId, message);
         sendMessage.setReplyMarkup(keyboard);
         executeMessage(sendMessage);
     }
 
     public void sendAvailableTimeSlotsForReschedule(long chatId, Appointment appointment, LocalDate selectedDate, Map<LocalTime, Boolean> timeSlots) {
-        String message = "Выберите новое время для переноса записи на " + selectedDate.format(DateTimeFormatter.ofPattern("dd.MM.yyyy")) + ":";
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy");
+        String message = String.format("Выберите новое время для переноса записи на %s:",
+                selectedDate.format(dateFormatter));
         InlineKeyboardMarkup keyboard = keyboardFactory.createTimeSelectionKeyboardForReschedule(timeSlots, appointment.getId(), selectedDate);
 
         SendMessage sendMessage = createMessage(chatId, message);
@@ -114,12 +139,14 @@ public class MessageSender {
     }
 
     public void sendRescheduleConfirmation(long chatId, Appointment rescheduledAppointment) {
-        String message = String.format("Запись успешно перенесена!\n\nНовое время приема: %s\nВрач: %s %s",
+        String message = String.format("Запись успешно перенесена!\n\nНовое время приема: %s\nВрач: %s %s\n\nЧто бы вы хотели сделать дальше?",
                 rescheduledAppointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
                 rescheduledAppointment.getDoctor().getFirstName(),
                 rescheduledAppointment.getDoctor().getLastName());
 
-        sendMessageWithMenuButton(chatId, message);
+        SendMessage sendMessage = createMessage(chatId, message);
+        sendMessage.setReplyMarkup(keyboardFactory.createMainMenuKeyboard());
+        executeMessage(sendMessage);
     }
 
     public void sendRescheduleConfirmationMessage(long chatId, Appointment appointment) {
@@ -148,10 +175,26 @@ public class MessageSender {
     }
 
     private void executeMessage(SendMessage message) {
-        try {
-            bot.execute(message);
-        } catch (TelegramApiException e) {
-            logger.error("Failed to send message", e);
+        int maxRetries = 3;
+        int retryDelay = 5000; // 5 seconds
+
+        for (int i = 0; i < maxRetries; i++) {
+            try {
+                bot.execute(message);
+                return; // If successful, exit the method
+            } catch (TelegramApiException e) {
+                if (i == maxRetries - 1) {
+                    logger.error("Failed to send message after {} attempts", maxRetries, e);
+                } else {
+                    logger.warn("Failed to send message, retrying in {} ms. Attempt {}/{}", retryDelay, i + 1, maxRetries);
+                    try {
+                        Thread.sleep(retryDelay);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        logger.error("Thread interrupted while waiting to retry", ie);
+                    }
+                }
+            }
         }
     }
 

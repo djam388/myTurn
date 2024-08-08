@@ -178,6 +178,53 @@ public class MenuHandler {
                         messageSender.sendMessageWithMenuButton(chatId, "Неизвестная команда для переноса записи.");
                     }
                     break;
+                case "BACK":
+                    if ("BACK_TO_MAIN_MENU".equals(callData)) {
+                        messageSender.sendMainMenu(chatId);
+                    } else if ("BACK_TO_DOCTORS".equals(callData)) {
+                        sendDoctorsList(chatId);
+                    } else if (callData.startsWith("BACK_TO_DATE_")) {
+                        String[] backParts = callData.split("_");
+                        if (backParts.length >= 4) {
+                            try {
+                                Long doctorId = Long.parseLong(backParts[3]);
+                                Doctor doctor = doctorService.getDoctorById(doctorId);
+                                if (doctor != null) {
+                                    List<LocalDate> availableDates = appointmentService.getAvailableDates(doctor, LocalDate.now(), LocalDate.now().plusDays(7));
+                                    messageSender.sendAvailableDatesWithBack(chatId, doctor, availableDates);
+                                } else {
+                                    logger.warn("Doctor not found for id: {}", doctorId);
+                                    messageSender.sendMessageWithMenuButton(chatId, "Извините, произошла ошибка. Пожалуйста, начните сначала.");
+                                }
+                            } catch (NumberFormatException e) {
+                                logger.error("Error parsing doctor id from callback data: {}", callData, e);
+                                messageSender.sendMessageWithMenuButton(chatId, "Произошла ошибка. Пожалуйста, начните сначала.");
+                            }
+                        } else {
+                            logger.warn("Invalid BACK_TO_DATE callback data: {}", callData);
+                            messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для возврата к выбору даты.");
+                        }
+                    } else if (callData.startsWith("BACK_TO_RESCHEDULE_DATE_")) {
+                        String[] backParts = callData.split("_");
+                        if (backParts.length >= 5) {
+                            try {
+                                Long appointmentId = Long.parseLong(backParts[4]);
+                                appointmentHandler.startRescheduleProcess(user, appointmentId);
+                            } catch (NumberFormatException e) {
+                                logger.error("Error parsing appointment id from callback data: {}", callData, e);
+                                messageSender.sendMessageWithMenuButton(chatId, "Произошла ошибка. Пожалуйста, начните сначала.");
+                            }
+                        } else {
+                            logger.warn("Invalid BACK_TO_RESCHEDULE_DATE callback data: {}", callData);
+                            messageSender.sendMessageWithMenuButton(chatId, "Неверные данные для возврата к выбору даты переноса.");
+                        }
+                    } else if ("BACK_TO_APPOINTMENTS".equals(callData)) {
+                        appointmentHandler.sendUserAppointments(user);
+                    } else {
+                        logger.warn("Unknown BACK action: {}", callData);
+                        messageSender.sendMessageWithMenuButton(chatId, "Неизвестная команда возврата.");
+                    }
+                    break;
             }
         } catch (DateTimeParseException e) {
             logger.error("Error parsing date or time: {}", e.getMessage());
@@ -190,7 +237,7 @@ public class MenuHandler {
 
     private void sendDoctorsList(long chatId) {
         List<Doctor> doctors = doctorService.getAllDoctors();
-        messageSender.sendDoctorsList(chatId, doctors);
+        messageSender.sendDoctorsListWithBackButton(chatId, doctors);
     }
 
     private void sendUserProfile(long chatId) {
@@ -198,9 +245,9 @@ public class MenuHandler {
         if (user != null) {
             String profileInfo = String.format("Ваш профиль:\nИмя: %s\nФамилия: %s\nТелефон: %s",
                     user.getFirstName(), user.getLastName(), user.getPhoneNumber());
-            messageSender.sendMessageWithMenuButton(chatId, profileInfo);
+            messageSender.sendMessageWithBackButton(chatId, profileInfo);
         } else {
-            messageSender.sendMessageWithMenuButton(chatId, "Ошибка: пользователь не найден.");
+            messageSender.sendMessageWithBackButton(chatId, "Ошибка: пользователь не найден.");
         }
     }
 
