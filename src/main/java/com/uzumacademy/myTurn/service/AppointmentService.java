@@ -167,14 +167,6 @@ public class AppointmentService {
 
         List<Appointment> appointments = appointmentRepository.findAll(sort);
 
-//        return appointments.stream()
-//                .filter(appointment -> (startDate == null || appointment.getAppointmentTime().isAfter(startDate))
-//                        && (endDate == null || appointment.getAppointmentTime().isBefore(endDate))
-//                        && (doctorId == null || appointment.getDoctor().getId().equals(doctorId))
-//                        && (status == null || appointment.getStatus().toString().equalsIgnoreCase(status)))
-//                .map(AppointmentDTO::fromAppointment)
-//                .collect(Collectors.toList());
-
         return appointments.stream()
                 .filter(appointment -> (startDate == null || !appointment.getAppointmentTime().isBefore(startDate))
                         && (endDate == null || !appointment.getAppointmentTime().isAfter(endDate))

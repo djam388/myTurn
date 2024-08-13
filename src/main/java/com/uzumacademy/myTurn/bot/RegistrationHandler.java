@@ -1,7 +1,6 @@
 package com.uzumacademy.myTurn.bot;
 
 import com.uzumacademy.myTurn.dto.UserDTO;
-import com.uzumacademy.myTurn.model.User;
 import com.uzumacademy.myTurn.service.UserService;
 import com.uzumacademy.myTurn.service.AuthenticationService;
 import org.slf4j.Logger;

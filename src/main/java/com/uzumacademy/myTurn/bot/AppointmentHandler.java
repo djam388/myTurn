@@ -137,21 +137,6 @@ public class AppointmentHandler {
         }
     }
 
-    public void handleRescheduleConfirmation(UserDTO userDTO, Long appointmentId) {
-        try {
-            AppointmentDTO appointment = appointmentService.getAppointmentById(appointmentId);
-            if (appointment == null || !appointment.getUserId().equals(userDTO.getId())) {
-                messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Запись не найдена или у вас нет прав на ее изменение.");
-                return;
-            }
-
-            messageSender.sendRescheduleConfirmationMessage(userDTO.getChatId(), appointment);
-        } catch (Exception e) {
-            logger.error("Error handling reschedule confirmation", e);
-            messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Произошла ошибка при подтверждении переноса. Пожалуйста, попробуйте еще раз.");
-        }
-    }
-
     public void startRescheduleProcess(UserDTO userDTO, Long appointmentId) {
         try {
             AppointmentDTO appointment = appointmentService.getAppointmentById(appointmentId);

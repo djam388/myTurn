@@ -2,7 +2,6 @@ package com.uzumacademy.myTurn.bot;
 
 import com.uzumacademy.myTurn.dto.UserDTO;
 import com.uzumacademy.myTurn.dto.DoctorDTO;
-import com.uzumacademy.myTurn.dto.AppointmentDTO;
 import com.uzumacademy.myTurn.service.UserService;
 import com.uzumacademy.myTurn.service.DoctorService;
 import com.uzumacademy.myTurn.service.AppointmentService;

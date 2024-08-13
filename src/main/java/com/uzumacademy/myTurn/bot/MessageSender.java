@@ -50,9 +50,6 @@ public class MessageSender {
         executeMessage(message);
     }
 
-    public void sendAvailableDates(long chatId, DoctorDTO doctor, List<LocalDate> availableDates) {
-        sendAvailableDatesWithBack(chatId, doctor, availableDates);
-    }
 
     public void sendAvailableDatesWithBack(long chatId, DoctorDTO doctor, List<LocalDate> availableDates) {
         String message = String.format("Выберите дату приема к врачу %s %s:", doctor.getFirstName(), doctor.getLastName());
@@ -60,10 +57,6 @@ public class MessageSender {
         SendMessage sendMessage = createMessage(chatId, message);
         sendMessage.setReplyMarkup(keyboard);
         executeMessage(sendMessage);
-    }
-
-    public void sendAvailableTimeSlots(long chatId, DoctorDTO doctor, LocalDate selectedDate, Map<LocalTime, Boolean> timeSlots) {
-        sendAvailableTimeSlotsWithBack(chatId, doctor, selectedDate, timeSlots);
     }
 
     public void sendAvailableTimeSlotsWithBack(long chatId, DoctorDTO doctor, LocalDate selectedDate, Map<LocalTime, Boolean> timeSlots) {
@@ -146,19 +139,6 @@ public class MessageSender {
 
         SendMessage sendMessage = createMessage(chatId, message);
         sendMessage.setReplyMarkup(keyboardFactory.createMainMenuKeyboard());
-        executeMessage(sendMessage);
-    }
-
-    public void sendRescheduleConfirmationMessage(long chatId, AppointmentDTO appointment) {
-        String message = String.format("Вы уверены, что хотите перенести запись?\n\nТекущее время приема: %s\nВрач: %s %s",
-                appointment.getAppointmentTime().format(DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")),
-                appointment.getDoctor().getFirstName(),
-                appointment.getDoctor().getLastName());
-
-        InlineKeyboardMarkup keyboard = keyboardFactory.createRescheduleConfirmationKeyboard(appointment.getId());
-
-        SendMessage sendMessage = createMessage(chatId, message);
-        sendMessage.setReplyMarkup(keyboard);
         executeMessage(sendMessage);
     }
 

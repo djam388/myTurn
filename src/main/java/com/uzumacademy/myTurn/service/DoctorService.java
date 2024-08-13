@@ -67,14 +67,6 @@ public class DoctorService {
     }
 
     @Transactional
-    public DoctorDTO addDoctor(DoctorDTO doctorDTO) {
-        logger.info("Adding new doctor: {} {}", doctorDTO.getFirstName(), doctorDTO.getLastName());
-        Doctor doctor = doctorDTO.toDoctor();
-        Doctor savedDoctor = doctorRepository.save(doctor);
-        return DoctorDTO.fromDoctor(savedDoctor);
-    }
-
-    @Transactional
     public DoctorDTO updateDoctor(DoctorDTO doctorDTO) {
         logger.info("Updating doctor with id: {}", doctorDTO.getId());
         if (!doctorRepository.existsById(doctorDTO.getId())) {

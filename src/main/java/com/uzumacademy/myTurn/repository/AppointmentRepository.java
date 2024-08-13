@@ -16,19 +16,6 @@ import java.util.Optional;
 @Repository
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
-    List<Appointment> findByUser(User user);
-
-    List<Appointment> findByDoctor(Doctor doctor);
-
-    List<Appointment> findByDoctorAndAppointmentTimeBetween(Doctor doctor, LocalDateTime start, LocalDateTime end);
-
-    Optional<Appointment> findByDoctorAndAppointmentTime(Doctor doctor, LocalDateTime appointmentTime);
-
-    List<Appointment> findByAppointmentTimeBetween(LocalDateTime start, LocalDateTime end);
-
-    @Query("SELECT COUNT(a) FROM Appointment a WHERE a.doctor = :doctor AND a.appointmentTime BETWEEN :start AND :end")
-    long countByDoctorAndAppointmentTimeBetween(@Param("doctor") Doctor doctor, @Param("start") LocalDateTime start, @Param("end") LocalDateTime end);
-
     @Query("SELECT a FROM Appointment a WHERE a.user = :user AND a.appointmentTime >= :currentTime AND a.status != 'CANCELLED' ORDER BY a.appointmentTime ASC")
     List<Appointment> findCurrentAndFutureAppointmentsByUser(@Param("user") User user, @Param("currentTime") LocalDateTime currentTime);
 
@@ -41,7 +28,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
     Optional<Appointment> findByDoctorAndAppointmentTimeAndStatusNot(Doctor doctor, LocalDateTime appointmentTime, Appointment.AppointmentStatus status);
 
-    List<Appointment> findByDoctorAndAppointmentTimeBetweenAndStatus(Doctor doctor, LocalDateTime start, LocalDateTime end, Appointment.AppointmentStatus status);
 
     List<Appointment> findAll(Sort sort);
 

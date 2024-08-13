@@ -27,32 +27,6 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public boolean authenticateByPhoneNumber(Long chatId, String phoneNumber) {
-        UserDTO userDTO = userService.getUserByChatId(chatId);
-        if (userDTO == null) {
-            logger.warn("Authentication attempt for non-existent user: {}", chatId);
-            return false;
-        }
-
-        if (isAccountLocked(chatId)) {
-            logger.warn("Authentication attempt for locked account: {}", chatId);
-            return false;
-        }
-
-        if (userDTO.getPhoneNumber() != null && userDTO.getPhoneNumber().equals(phoneNumber)) {
-            userDTO.setLastActive(LocalDateTime.now());
-            userService.updateUser(userDTO);
-            resetLoginAttempts(chatId);
-            logger.info("User authenticated successfully: {}", chatId);
-            return true;
-        } else {
-            incrementLoginAttempts(chatId);
-            logger.warn("Failed authentication attempt for user: {}", chatId);
-            return false;
-        }
-    }
-
-    @Transactional
     public void setPhoneNumber(UserDTO userDTO, String phoneNumber) {
         if (!isValidPhoneNumber(phoneNumber)) {
             throw new IllegalArgumentException("Invalid phone number format");
@@ -63,32 +37,9 @@ public class AuthenticationService {
         logger.info("Phone number set for user: {}", userDTO.getChatId());
     }
 
-    public boolean isUserRegistered(Long chatId) {
-        UserDTO userDTO = userService.getUserByChatId(chatId);
-        return userDTO != null && userDTO.getRegistrationState() == UserDTO.RegistrationState.COMPLETED;
-    }
-
     private boolean isValidPhoneNumber(String phoneNumber) {
         // Simple validation: phone number should not be blank
         return !phoneNumber.isBlank();
-    }
-
-    private void incrementLoginAttempts(Long chatId) {
-        int attempts = loginAttempts.getOrDefault(chatId, 0) + 1;
-        loginAttempts.put(chatId, attempts);
-        if (attempts >= MAX_ATTEMPTS) {
-            lockAccount(chatId);
-        }
-    }
-
-    private void resetLoginAttempts(Long chatId) {
-        loginAttempts.remove(chatId);
-        lockedAccounts.remove(chatId);
-    }
-
-    private void lockAccount(Long chatId) {
-        lockedAccounts.put(chatId, LocalDateTime.now().plusMinutes(LOCK_TIME_MINUTES));
-        logger.warn("Account locked due to multiple failed attempts: {}", chatId);
     }
 
     private boolean isAccountLocked(Long chatId) {
