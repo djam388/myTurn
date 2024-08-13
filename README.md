@@ -48,3 +48,11 @@ bot.token=your_bot_token
 - `com.uzumacademy.myTurn.model`: Модели данных (User, Doctor, Appointment)
 - `com.uzumacademy.myTurn.repository`: Репозитории для работы с базой данных
 - `com.uzumacademy.myTurn.service`: Сервисные классы для бизнес-логики
+
+## Выгрузка списка записей к специалистам
+
+Выгрузка всего списка записей через API: 
+- `http://localhost:8080/api/admin/appointments`
+
+Выгрузка списка через API на запрашиваемый день:
+- `http://localhost:8080/api/admin/appointments?startDate=2024-08-14T00:00:00&endDate=2024-08-15T23:59:59`

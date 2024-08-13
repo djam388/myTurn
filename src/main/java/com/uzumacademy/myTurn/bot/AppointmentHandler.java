@@ -1,8 +1,8 @@
 package com.uzumacademy.myTurn.bot;
 
-import com.uzumacademy.myTurn.model.User;
-import com.uzumacademy.myTurn.model.Doctor;
-import com.uzumacademy.myTurn.model.Appointment;
+import com.uzumacademy.myTurn.dto.UserDTO;
+import com.uzumacademy.myTurn.dto.DoctorDTO;
+import com.uzumacademy.myTurn.dto.AppointmentDTO;
 import com.uzumacademy.myTurn.service.UserService;
 import com.uzumacademy.myTurn.service.DoctorService;
 import com.uzumacademy.myTurn.service.AppointmentService;
@@ -13,7 +13,6 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
@@ -34,163 +33,155 @@ public class AppointmentHandler {
         this.messageSender = messageSender;
     }
 
-    public void handleBookingRequest(User user, Long doctorId) {
-        Doctor doctor = doctorService.getDoctorById(doctorId);
-        if (doctor == null) {
-            messageSender.sendMessageWithMenuButton(user.getChatId(), "Врач с указанным ID не найден.");
+    public void handleBookingRequest(UserDTO userDTO, Long doctorId) {
+        DoctorDTO doctorDTO = doctorService.getDoctorById(doctorId);
+        if (doctorDTO == null) {
+            messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Врач с указанным ID не найден.");
             return;
         }
 
         LocalDate currentDate = LocalDate.now();
-        List<LocalDate> availableDates = appointmentService.getAvailableDates(doctor, currentDate, currentDate.plusDays(appointmentService.getInitialBookingDaysAhead()));
+        List<LocalDate> availableDates = appointmentService.getAvailableDates(doctorDTO, currentDate, currentDate.plusDays(appointmentService.getInitialBookingDaysAhead()));
 
-        messageSender.sendAvailableDatesWithBack(user.getChatId(), doctor, availableDates);
+        messageSender.sendAvailableDatesWithBack(userDTO.getChatId(), doctorDTO, availableDates);
     }
 
-    public void handleDateSelection(User user, Long id, LocalDate selectedDate, boolean isReschedule) {
+    public void handleDateSelection(UserDTO userDTO, Long id, LocalDate selectedDate, boolean isReschedule) {
         if (isReschedule) {
-            handleRescheduleDateSelection(user, id, selectedDate);
+            handleRescheduleDateSelection(userDTO, id, selectedDate);
         } else {
-            Doctor doctor = doctorService.getDoctorById(id);
-            if (doctor == null) {
-                messageSender.sendMessageWithMenuButton(user.getChatId(), "Врач не найден.");
+            DoctorDTO doctorDTO = doctorService.getDoctorById(id);
+            if (doctorDTO == null) {
+                messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Врач не найден.");
                 return;
             }
-            Map<LocalTime, Boolean> availableTimeSlots = appointmentService.getAvailableTimeSlots(doctor, selectedDate);
-            messageSender.sendAvailableTimeSlotsWithBack(user.getChatId(), doctor, selectedDate, availableTimeSlots);
+            Map<LocalTime, Boolean> availableTimeSlots = appointmentService.getAvailableTimeSlots(doctorDTO, selectedDate);
+            messageSender.sendAvailableTimeSlotsWithBack(userDTO.getChatId(), doctorDTO, selectedDate, availableTimeSlots);
         }
     }
 
-    public void handleTimeSelection(User user, Long id, LocalDate selectedDate, LocalTime selectedTime, boolean isReschedule) {
+    public void handleTimeSelection(UserDTO userDTO, Long id, LocalDate selectedDate, LocalTime selectedTime, boolean isReschedule) {
         if (isReschedule) {
-            handleRescheduleTimeSelection(user, id, selectedDate, selectedTime);
+            handleRescheduleTimeSelection(userDTO, id, selectedDate, selectedTime);
         } else {
-            handleNewAppointmentTimeSelection(user, id, selectedDate, selectedTime);
+            handleNewAppointmentTimeSelection(userDTO, id, selectedDate, selectedTime);
         }
     }
 
-    private void handleNewAppointmentTimeSelection(User user, Long doctorId, LocalDate selectedDate, LocalTime selectedTime) {
-        Doctor doctor = doctorService.getDoctorById(doctorId);
-        if (doctor == null) {
-            messageSender.sendMessageWithMenuButton(user.getChatId(), "Врач не найден.");
+    private void handleNewAppointmentTimeSelection(UserDTO userDTO, Long doctorId, LocalDate selectedDate, LocalTime selectedTime) {
+        DoctorDTO doctorDTO = doctorService.getDoctorById(doctorId);
+        if (doctorDTO == null) {
+            messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Врач не найден.");
             return;
         }
         LocalDateTime appointmentDateTime = LocalDateTime.of(selectedDate, selectedTime);
-        if (appointmentService.isSlotAvailable(doctor, appointmentDateTime)) {
-            Appointment appointment = appointmentService.scheduleAppointment(user, doctor, appointmentDateTime);
-            messageSender.sendAppointmentConfirmation(user.getChatId(), appointment);
+        if (appointmentService.isSlotAvailable(doctorDTO, appointmentDateTime)) {
+            AppointmentDTO appointment = appointmentService.scheduleAppointment(userDTO, doctorDTO, appointmentDateTime);
+            messageSender.sendAppointmentConfirmation(userDTO.getChatId(), appointment);
         } else {
-            messageSender.sendMessageWithMenuButton(user.getChatId(),
+            messageSender.sendMessageWithMenuButton(userDTO.getChatId(),
                     "Извините, этот слот уже занят. Пожалуйста, выберите другое время.");
-            handleBookingRequest(user, doctor.getId());
+            handleBookingRequest(userDTO, doctorId);
         }
     }
 
-    public void handleRescheduleDateSelection(User user, Long appointmentId, LocalDate selectedDate) {
+    public void handleRescheduleDateSelection(UserDTO userDTO, Long appointmentId, LocalDate selectedDate) {
         try {
-            Appointment appointment = appointmentService.getAppointmentById(appointmentId);
-            if (appointment == null || !appointment.getUser().getId().equals(user.getId())) {
-                messageSender.sendMessageWithMenuButton(user.getChatId(), "Запись не найдена или у вас нет прав на ее изменение.");
+            AppointmentDTO appointment = appointmentService.getAppointmentById(appointmentId);
+            if (appointment == null || !appointment.getUserId().equals(userDTO.getId())) {
+                messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Запись не найдена или у вас нет прав на ее изменение.");
                 return;
             }
 
-            Map<LocalTime, Boolean> availableTimeSlots = appointmentService.getAvailableTimeSlots(appointment.getDoctor(), selectedDate);
-            messageSender.sendAvailableTimeSlotsForReschedule(user.getChatId(), appointment, selectedDate, availableTimeSlots);
+            DoctorDTO doctorDTO = doctorService.getDoctorById(appointment.getDoctor().getId());
+            Map<LocalTime, Boolean> availableTimeSlots = appointmentService.getAvailableTimeSlots(doctorDTO, selectedDate);
+            messageSender.sendAvailableTimeSlotsForReschedule(userDTO.getChatId(), appointment, selectedDate, availableTimeSlots);
         } catch (Exception e) {
             logger.error("Error handling reschedule date selection", e);
-            messageSender.sendMessageWithMenuButton(user.getChatId(), "Произошла ошибка при выборе даты. Пожалуйста, попробуйте еще раз.");
+            messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Произошла ошибка при выборе даты. Пожалуйста, попробуйте еще раз.");
         }
     }
 
-    private void handleRescheduleTimeSelection(User user, Long appointmentId, LocalDate selectedDate, LocalTime selectedTime) {
+    private void handleRescheduleTimeSelection(UserDTO userDTO, Long appointmentId, LocalDate selectedDate, LocalTime selectedTime) {
         try {
             LocalDateTime newAppointmentTime = LocalDateTime.of(selectedDate, selectedTime);
-            Appointment rescheduledAppointment = appointmentService.rescheduleAppointment(appointmentId, newAppointmentTime);
-            messageSender.sendRescheduleConfirmation(user.getChatId(), rescheduledAppointment);
+            AppointmentDTO rescheduledAppointment = appointmentService.rescheduleAppointment(appointmentId, newAppointmentTime);
+            messageSender.sendRescheduleConfirmation(userDTO.getChatId(), rescheduledAppointment);
         } catch (Exception e) {
             logger.error("Error handling reschedule time selection", e);
-            messageSender.sendMessageWithMenuButton(user.getChatId(), "Произошла ошибка при выборе времени. Пожалуйста, попробуйте еще раз.");
+            messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Произошла ошибка при выборе времени. Пожалуйста, попробуйте еще раз.");
         }
     }
 
-    public void sendUserAppointments(User user) {
-        logger.info("Fetching appointments for user: {}", user.getId());
-        List<Appointment> allAppointments = appointmentService.getAllAppointments();
-        logger.info("Total appointments in system: {}", allAppointments.size());
-        allAppointments.forEach(appointment ->
-                logger.info("All appointments: id={}, userId={}, doctorId={}, dateTime={}, status={}",
-                        appointment.getId(), appointment.getUser().getId(), appointment.getDoctor().getId(),
-                        appointment.getAppointmentTime(), appointment.getStatus())
-        );
-
-        List<Appointment> userAppointments = appointmentService.getCurrentAndFutureUserAppointments(user);
-        logger.info("Found {} current and future appointments for user: {}", userAppointments.size(), user.getId());
-        messageSender.sendUserAppointments(user.getChatId(), userAppointments);
+    public void sendUserAppointments(UserDTO userDTO) {
+        logger.info("Fetching appointments for user: {}", userDTO.getId());
+        List<AppointmentDTO> userAppointments = appointmentService.getCurrentAndFutureUserAppointments(userDTO);
+        logger.info("Found {} current and future appointments for user: {}", userAppointments.size(), userDTO.getId());
+        messageSender.sendUserAppointments(userDTO.getChatId(), userAppointments);
     }
 
-    public void handleAppointmentCancellation(User user, Long appointmentId) {
+    public void handleAppointmentCancellation(UserDTO userDTO, Long appointmentId) {
         try {
             appointmentService.cancelAppointment(appointmentId);
-            messageSender.sendMessage(user.getChatId(), "Запись успешно отменена.");
+            messageSender.sendMessage(userDTO.getChatId(), "Запись успешно отменена.");
 
-            List<Appointment> updatedAppointments = appointmentService.getCurrentAndFutureUserAppointments(user);
+            List<AppointmentDTO> updatedAppointments = appointmentService.getCurrentAndFutureUserAppointments(userDTO);
             if (updatedAppointments.isEmpty()) {
-                messageSender.sendMessageWithMenuButton(user.getChatId(), "У вас нет запланированных приемов.");
+                messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "У вас нет запланированных приемов.");
             } else {
-                messageSender.sendUserAppointments(user.getChatId(), updatedAppointments);
+                messageSender.sendUserAppointments(userDTO.getChatId(), updatedAppointments);
             }
         } catch (RuntimeException e) {
             logger.error("Error cancelling appointment", e);
-            messageSender.sendMessageWithMenuButton(user.getChatId(), "Ошибка при отмене записи. Пожалуйста, попробуйте позже.");
+            messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Ошибка при отмене записи. Пожалуйста, попробуйте позже.");
         }
     }
 
-    public void handleRescheduleConfirmation(User user, Long appointmentId) {
+    public void handleRescheduleConfirmation(UserDTO userDTO, Long appointmentId) {
         try {
-            Appointment appointment = appointmentService.getAppointmentById(appointmentId);
-            if (appointment == null || !appointment.getUser().getId().equals(user.getId())) {
-                messageSender.sendMessageWithMenuButton(user.getChatId(), "Запись не найдена или у вас нет прав на ее изменение.");
+            AppointmentDTO appointment = appointmentService.getAppointmentById(appointmentId);
+            if (appointment == null || !appointment.getUserId().equals(userDTO.getId())) {
+                messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Запись не найдена или у вас нет прав на ее изменение.");
                 return;
             }
 
-            // Здесь можно добавить дополнительную логику подтверждения переноса
-            // Например, отправку сообщения с деталями переноса и кнопками подтверждения/отмены
-
-            messageSender.sendRescheduleConfirmationMessage(user.getChatId(), appointment);
+            messageSender.sendRescheduleConfirmationMessage(userDTO.getChatId(), appointment);
         } catch (Exception e) {
             logger.error("Error handling reschedule confirmation", e);
-            messageSender.sendMessageWithMenuButton(user.getChatId(), "Произошла ошибка при подтверждении переноса. Пожалуйста, попробуйте еще раз.");
+            messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Произошла ошибка при подтверждении переноса. Пожалуйста, попробуйте еще раз.");
         }
     }
 
-    public void startRescheduleProcess(User user, Long appointmentId) {
+    public void startRescheduleProcess(UserDTO userDTO, Long appointmentId) {
         try {
-            Appointment appointment = appointmentService.getAppointmentById(appointmentId);
-            if (appointment == null || !appointment.getUser().getId().equals(user.getId())) {
-                messageSender.sendMessageWithMenuButton(user.getChatId(), "Запись не найдена или у вас нет прав на ее изменение.");
+            AppointmentDTO appointment = appointmentService.getAppointmentById(appointmentId);
+            if (appointment == null || !appointment.getUserId().equals(userDTO.getId())) {
+                messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Запись не найдена или у вас нет прав на ее изменение.");
                 return;
             }
 
-            if (appointment.getStatus() == Appointment.AppointmentStatus.CANCELLED) {
-                messageSender.sendMessageWithMenuButton(user.getChatId(), "Невозможно перенести отмененную запись. Пожалуйста, создайте новую запись.");
+            if (appointment.getStatus().equals("CANCELLED")) {
+                messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Невозможно перенести отмененную запись. Пожалуйста, создайте новую запись.");
                 return;
             }
 
-            if (!appointment.canBeRescheduled()) {
-                messageSender.sendMessageWithMenuButton(user.getChatId(), "Эту запись нельзя перенести, так как до приема осталось менее 2 дней.");
+            LocalDateTime appointmentDateTime = appointment.getAppointmentTime();
+            if (appointmentDateTime.minusDays(2).isBefore(LocalDateTime.now())) {
+                messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Эту запись нельзя перенести, так как до приема осталось менее 2 дней.");
                 return;
             }
 
             LocalDate currentDate = LocalDate.now();
+            DoctorDTO doctorDTO = doctorService.getDoctorById(appointment.getDoctor().getId());
             List<LocalDate> availableDates = appointmentService.getAvailableDates(
-                    appointment.getDoctor(),
+                    doctorDTO,
                     currentDate.plusDays(appointmentService.getRescheduleMinDaysAhead()),
                     currentDate.plusDays(appointmentService.getRescheduleMaxDaysAhead())
             );
-            messageSender.sendAvailableDatesForReschedule(user.getChatId(), appointment, availableDates);
+            messageSender.sendAvailableDatesForReschedule(userDTO.getChatId(), appointment, availableDates);
         } catch (Exception e) {
             logger.error("Error starting reschedule process", e);
-            messageSender.sendMessageWithMenuButton(user.getChatId(), "Произошла ошибка при попытке переноса записи. Пожалуйста, попробуйте позже.");
+            messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Произошла ошибка при попытке переноса записи. Пожалуйста, попробуйте позже.");
         }
     }
 }

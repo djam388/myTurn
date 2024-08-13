@@ -1,5 +1,6 @@
 package com.uzumacademy.myTurn.bot;
 
+import com.uzumacademy.myTurn.dto.UserDTO;
 import com.uzumacademy.myTurn.model.User;
 import com.uzumacademy.myTurn.service.UserService;
 import com.uzumacademy.myTurn.service.AuthenticationService;
@@ -21,54 +22,54 @@ public class RegistrationHandler {
         this.messageSender = messageSender;
     }
 
-    public void startRegistration(User user) {
-        user.setRegistrationState(User.RegistrationState.AWAITING_FIRST_NAME);
-        userService.updateUser(user);
-        messageSender.sendMessageWithoutKeyboard(user.getChatId(), "Добро пожаловать в сервис записи к врачу! Пожалуйста, введите ваше имя.");
+    public void startRegistration(UserDTO userDTO) {
+        userDTO.setRegistrationState(UserDTO.RegistrationState.AWAITING_FIRST_NAME);
+        userService.updateUser(userDTO);
+        messageSender.sendMessageWithoutKeyboard(userDTO.getChatId(), "Добро пожаловать в сервис записи к врачу! Пожалуйста, введите ваше имя.");
     }
 
-    public void processUserInput(User user, String messageText) {
-        switch (user.getRegistrationState()) {
+    public void processUserInput(UserDTO userDTO, String messageText) {
+        switch (userDTO.getRegistrationState()) {
             case AWAITING_FIRST_NAME:
-                processFirstName(user, messageText);
+                processFirstName(userDTO, messageText);
                 break;
             case AWAITING_LAST_NAME:
-                processLastName(user, messageText);
+                processLastName(userDTO, messageText);
                 break;
             case AWAITING_PHONE_NUMBER:
-                processPhoneNumber(user, messageText);
+                processPhoneNumber(userDTO, messageText);
                 break;
         }
     }
 
-    private void processFirstName(User user, String firstName) {
-        user.setFirstName(firstName);
-        user.setRegistrationState(User.RegistrationState.AWAITING_LAST_NAME);
-        userService.updateUser(user);
-        messageSender.sendMessageWithoutKeyboard(user.getChatId(), "Спасибо! Теперь введите вашу фамилию.");
+    private void processFirstName(UserDTO userDTO, String firstName) {
+        userDTO.setFirstName(firstName);
+        userDTO.setRegistrationState(UserDTO.RegistrationState.AWAITING_LAST_NAME);
+        userService.updateUser(userDTO);
+        messageSender.sendMessageWithoutKeyboard(userDTO.getChatId(), "Спасибо! Теперь введите вашу фамилию.");
     }
 
-    private void processLastName(User user, String lastName) {
-        user.setLastName(lastName);
-        user.setRegistrationState(User.RegistrationState.AWAITING_PHONE_NUMBER);
-        userService.updateUser(user);
-        messageSender.requestPhoneNumber(user.getChatId());
+    private void processLastName(UserDTO userDTO, String lastName) {
+        userDTO.setLastName(lastName);
+        userDTO.setRegistrationState(UserDTO.RegistrationState.AWAITING_PHONE_NUMBER);
+        userService.updateUser(userDTO);
+        messageSender.requestPhoneNumber(userDTO.getChatId());
     }
 
-    public void processPhoneNumber(User user, String phoneNumber) {
+    public void processPhoneNumber(UserDTO userDTO, String phoneNumber) {
         try {
-            authService.setPhoneNumber(user, phoneNumber);
-            completeRegistration(user);
+            authService.setPhoneNumber(userDTO, phoneNumber);
+            completeRegistration(userDTO);
         } catch (IllegalArgumentException e) {
-            messageSender.sendMessageWithoutKeyboard(user.getChatId(), "Неверный формат номера телефона. Пожалуйста, попробуйте еще раз.");
-            messageSender.requestPhoneNumber(user.getChatId());
+            messageSender.sendMessageWithoutKeyboard(userDTO.getChatId(), "Неверный формат номера телефона. Пожалуйста, попробуйте еще раз.");
+            messageSender.requestPhoneNumber(userDTO.getChatId());
         }
     }
 
-    private void completeRegistration(User user) {
-        user.setRegistrationState(User.RegistrationState.COMPLETED);
-        userService.updateUser(user);
-        messageSender.sendMessageWithMenuButton(user.getChatId(), "Регистрация завершена! Теперь вы можете использовать кнопку 'Меню' для доступа к функциям бота.");
-        messageSender.sendMainMenu(user.getChatId());
+    private void completeRegistration(UserDTO userDTO) {
+        userDTO.setRegistrationState(UserDTO.RegistrationState.COMPLETED);
+        userService.updateUser(userDTO);
+        messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Регистрация завершена! Теперь вы можете использовать кнопку 'Меню' для доступа к функциям бота.");
+        messageSender.sendMainMenu(userDTO.getChatId());
     }
 }

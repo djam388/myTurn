@@ -1,6 +1,7 @@
 package com.uzumacademy.myTurn.bot;
 
 import com.uzumacademy.myTurn.config.BotConfig;
+import com.uzumacademy.myTurn.dto.UserDTO;
 import com.uzumacademy.myTurn.service.UserService;
 import com.uzumacademy.myTurn.service.AuthenticationService;
 import com.uzumacademy.myTurn.service.DoctorService;

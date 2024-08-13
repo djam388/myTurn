@@ -1,7 +1,7 @@
 package com.uzumacademy.myTurn.bot;
 
-import com.uzumacademy.myTurn.model.Appointment;
-import com.uzumacademy.myTurn.model.Doctor;
+import com.uzumacademy.myTurn.dto.AppointmentDTO;
+import com.uzumacademy.myTurn.dto.DoctorDTO;
 import org.springframework.stereotype.Component;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup;
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup;
@@ -39,10 +39,10 @@ public class KeyboardFactory {
         return markupInline;
     }
 
-    public InlineKeyboardMarkup createDoctorsListKeyboardWithBack(List<Doctor> doctors) {
+    public InlineKeyboardMarkup createDoctorsListKeyboardWithBack(List<DoctorDTO> doctors) {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-        for (Doctor doctor : doctors) {
+        for (DoctorDTO doctor : doctors) {
             rowsInline.add(List.of(InlineKeyboardButton.builder()
                     .text(doctor.getFirstName() + " " + doctor.getLastName() + " (" + doctor.getSpecialization() + ")")
                     .callbackData("DOCTOR_" + doctor.getId())
@@ -60,7 +60,6 @@ public class KeyboardFactory {
         return createDateSelectionKeyboard(availableDates, doctorId, "DATE", "BACK_TO_DOCTORS");
     }
 
-
     private InlineKeyboardMarkup createDateSelectionKeyboard(List<LocalDate> availableDates, Long id, String prefix, String backAction) {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
@@ -76,7 +75,7 @@ public class KeyboardFactory {
             button.setCallbackData(prefix + "_" + id + "_" + date.format(fullFormatter));
             currentRow.add(button);
 
-            if (currentRow.size() == 4) {
+            if (currentRow.size() == 3) {
                 rowsInline.add(new ArrayList<>(currentRow));
                 currentRow.clear();
             }
@@ -89,6 +88,40 @@ public class KeyboardFactory {
         rowsInline.add(List.of(InlineKeyboardButton.builder()
                 .text("Назад")
                 .callbackData(backAction)
+                .build()));
+
+        markupInline.setKeyboard(rowsInline);
+        return markupInline;
+    }
+
+    public InlineKeyboardMarkup createDateSelectionKeyboardForReschedule(List<LocalDate> availableDates, Long appointmentId) {
+        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
+        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
+
+        DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd.MM (EE)", new Locale("ru"));
+        DateTimeFormatter fullFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+        List<InlineKeyboardButton> currentRow = new ArrayList<>();
+        for (LocalDate date : availableDates) {
+            InlineKeyboardButton button = new InlineKeyboardButton();
+            String formattedDate = date.format(displayFormatter);
+            button.setText(formattedDate);
+            button.setCallbackData("RESCHEDULE_DATE_" + appointmentId + "_" + date.format(fullFormatter));
+            currentRow.add(button);
+
+            if (currentRow.size() == 3) {
+                rowsInline.add(new ArrayList<>(currentRow));
+                currentRow.clear();
+            }
+        }
+
+        if (!currentRow.isEmpty()) {
+            rowsInline.add(currentRow);
+        }
+
+        rowsInline.add(List.of(InlineKeyboardButton.builder()
+                .text("Назад")
+                .callbackData("BACK_TO_APPOINTMENTS")
                 .build()));
 
         markupInline.setKeyboard(rowsInline);
@@ -146,18 +179,18 @@ public class KeyboardFactory {
         return keyboardMarkup;
     }
 
-    public InlineKeyboardMarkup createAppointmentActionsKeyboard(Appointment appointment) {
+    public InlineKeyboardMarkup createAppointmentActionsKeyboard(AppointmentDTO appointment) {
         InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
         List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
 
-        if (appointment.getStatus() != Appointment.AppointmentStatus.CANCELLED) {
+        if (!appointment.getStatus().equals("CANCELLED")) {
             InlineKeyboardButton rescheduleButton = new InlineKeyboardButton();
             rescheduleButton.setText("Перенести запись");
             rescheduleButton.setCallbackData("RESCHEDULE_APPOINTMENT_" + appointment.getId());
             rowsInline.add(Collections.singletonList(rescheduleButton));
         }
 
-        if (appointment.getStatus() == Appointment.AppointmentStatus.SCHEDULED) {
+        if (appointment.getStatus().equals("SCHEDULED")) {
             InlineKeyboardButton cancelButton = new InlineKeyboardButton();
             cancelButton.setText("Отменить запись");
             cancelButton.setCallbackData("CANCEL_APPOINTMENT_" + appointment.getId());
@@ -192,40 +225,6 @@ public class KeyboardFactory {
         rowsInline.add(Collections.singletonList(InlineKeyboardButton.builder()
                 .text("Назад")
                 .callbackData("BACK_TO_MAIN_MENU")
-                .build()));
-
-        markupInline.setKeyboard(rowsInline);
-        return markupInline;
-    }
-
-    public InlineKeyboardMarkup createDateSelectionKeyboardForReschedule(List<LocalDate> availableDates, Long appointmentId) {
-        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-
-        DateTimeFormatter displayFormatter = DateTimeFormatter.ofPattern("dd.MM (EE)", new Locale("ru"));
-        DateTimeFormatter fullFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-
-        List<InlineKeyboardButton> currentRow = new ArrayList<>();
-        for (LocalDate date : availableDates) {
-            InlineKeyboardButton button = new InlineKeyboardButton();
-            String formattedDate = date.format(displayFormatter);
-            button.setText(formattedDate);
-            button.setCallbackData("RESCHEDULE_DATE_" + appointmentId + "_" + date.format(fullFormatter));
-            currentRow.add(button);
-
-            if (currentRow.size() == 4) {
-                rowsInline.add(new ArrayList<>(currentRow));
-                currentRow.clear();
-            }
-        }
-
-        if (!currentRow.isEmpty()) {
-            rowsInline.add(currentRow);
-        }
-
-        rowsInline.add(List.of(InlineKeyboardButton.builder()
-                .text("Назад")
-                .callbackData("BACK_TO_APPOINTMENTS")
                 .build()));
 
         markupInline.setKeyboard(rowsInline);

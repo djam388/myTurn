@@ -1,6 +1,6 @@
 package com.uzumacademy.myTurn.bot;
 
-import com.uzumacademy.myTurn.model.User;
+import com.uzumacademy.myTurn.dto.UserDTO;
 import com.uzumacademy.myTurn.service.UserService;
 import com.uzumacademy.myTurn.service.AuthenticationService;
 import org.slf4j.Logger;
@@ -30,39 +30,39 @@ public class MessageHandler {
 
     public void handleMessage(Message message) {
         long chatId = message.getChatId();
-        User user = userService.getOrCreateUser(chatId);
+        UserDTO userDTO = userService.getOrCreateUser(chatId);
 
         if (message.hasText()) {
             String messageText = message.getText();
-            handleTextMessage(user, messageText);
+            handleTextMessage(userDTO, messageText);
         } else if (message.hasContact()) {
-            registrationHandler.processPhoneNumber(user, message.getContact().getPhoneNumber());
+            registrationHandler.processPhoneNumber(userDTO, message.getContact().getPhoneNumber());
         }
     }
 
-    private void handleTextMessage(User user, String messageText) {
+    private void handleTextMessage(UserDTO userDTO, String messageText) {
         switch (messageText) {
             case "/start":
             case "Начать":
-                if (user.isRegistrationCompleted()) {
-                    messageSender.sendMessageWithMenuButton(user.getChatId(), "Вы уже зарегистрированы. Используйте кнопку 'Меню' для доступа к функциям бота.");
+                if (userDTO.getRegistrationState() == UserDTO.RegistrationState.COMPLETED) {
+                    messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Вы уже зарегистрированы. Используйте кнопку 'Меню' для доступа к функциям бота.");
                 } else {
-                    registrationHandler.startRegistration(user);
+                    registrationHandler.startRegistration(userDTO);
                 }
                 break;
             case "/menu":
             case "Меню":
-                if (user.isRegistrationCompleted()) {
-                    messageSender.sendMainMenu(user.getChatId());
+                if (userDTO.getRegistrationState() == UserDTO.RegistrationState.COMPLETED) {
+                    messageSender.sendMainMenu(userDTO.getChatId());
                 } else {
-                    messageSender.sendMessageWithStartButton(user.getChatId(), "Пожалуйста, сначала завершите регистрацию.");
+                    messageSender.sendMessageWithStartButton(userDTO.getChatId(), "Пожалуйста, сначала завершите регистрацию.");
                 }
                 break;
             default:
-                if (!user.isRegistrationCompleted()) {
-                    registrationHandler.processUserInput(user, messageText);
+                if (userDTO.getRegistrationState() != UserDTO.RegistrationState.COMPLETED) {
+                    registrationHandler.processUserInput(userDTO, messageText);
                 } else {
-                    messageSender.sendMessageWithMenuButton(user.getChatId(), "Используйте кнопку 'Меню' для доступа к функциям бота.");
+                    messageSender.sendMessageWithMenuButton(userDTO.getChatId(), "Используйте кнопку 'Меню' для доступа к функциям бота.");
                 }
         }
     }

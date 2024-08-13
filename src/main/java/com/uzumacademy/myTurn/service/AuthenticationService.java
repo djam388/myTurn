@@ -1,6 +1,6 @@
 package com.uzumacademy.myTurn.service;
 
-import com.uzumacademy.myTurn.model.User;
+import com.uzumacademy.myTurn.dto.UserDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,8 +28,8 @@ public class AuthenticationService {
 
     @Transactional
     public boolean authenticateByPhoneNumber(Long chatId, String phoneNumber) {
-        User user = userService.getUserByChatId(chatId);
-        if (user == null) {
+        UserDTO userDTO = userService.getUserByChatId(chatId);
+        if (userDTO == null) {
             logger.warn("Authentication attempt for non-existent user: {}", chatId);
             return false;
         }
@@ -39,9 +39,9 @@ public class AuthenticationService {
             return false;
         }
 
-        if (user.getPhoneNumber() != null && user.getPhoneNumber().equals(phoneNumber)) {
-            user.updateLastActive();
-            userService.updateUser(user);
+        if (userDTO.getPhoneNumber() != null && userDTO.getPhoneNumber().equals(phoneNumber)) {
+            userDTO.setLastActive(LocalDateTime.now());
+            userService.updateUser(userDTO);
             resetLoginAttempts(chatId);
             logger.info("User authenticated successfully: {}", chatId);
             return true;
@@ -53,24 +53,23 @@ public class AuthenticationService {
     }
 
     @Transactional
-    public void setPhoneNumber(User user, String phoneNumber) {
+    public void setPhoneNumber(UserDTO userDTO, String phoneNumber) {
         if (!isValidPhoneNumber(phoneNumber)) {
             throw new IllegalArgumentException("Invalid phone number format");
         }
-        user.setPhoneNumber(phoneNumber);
-        user.setRegistrationState(User.RegistrationState.COMPLETED);
-        userService.updateUser(user);
-        logger.info("Phone number set for user: {}", user.getChatId());
+        userDTO.setPhoneNumber(phoneNumber);
+        userDTO.setRegistrationState(UserDTO.RegistrationState.COMPLETED);
+        userService.updateUser(userDTO);
+        logger.info("Phone number set for user: {}", userDTO.getChatId());
     }
 
     public boolean isUserRegistered(Long chatId) {
-        User user = userService.getUserByChatId(chatId);
-        return user != null && user.isRegistrationCompleted();
+        UserDTO userDTO = userService.getUserByChatId(chatId);
+        return userDTO != null && userDTO.getRegistrationState() == UserDTO.RegistrationState.COMPLETED;
     }
 
     private boolean isValidPhoneNumber(String phoneNumber) {
-        // Simple validation: phone number should contain only digits and be of certain length
-//        return phoneNumber.matches("\\d{10,12}");
+        // Simple validation: phone number should not be blank
         return !phoneNumber.isBlank();
     }
 
