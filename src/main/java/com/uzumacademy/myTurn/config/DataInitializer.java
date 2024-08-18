@@ -1,18 +1,24 @@
 package com.uzumacademy.myTurn.config;
 
 import com.uzumacademy.myTurn.model.Doctor;
+import com.uzumacademy.myTurn.model.ClinicEmployee;
 import com.uzumacademy.myTurn.repository.DoctorRepository;
+import com.uzumacademy.myTurn.repository.ClinicEmployeeRepository;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 
 @Configuration
 public class DataInitializer {
 
     @Bean
-    CommandLineRunner initDatabase(DoctorRepository doctorRepository) {
+    CommandLineRunner initDatabase(DoctorRepository doctorRepository,
+                                   ClinicEmployeeRepository clinicEmployeeRepository,
+                                   PasswordEncoder passwordEncoder) {
         return args -> {
             if (doctorRepository.count() == 0) {
                 Doctor doctor1 = new Doctor();
@@ -56,6 +62,29 @@ public class DataInitializer {
                 doctor5.setActive(true);
 
                 doctorRepository.saveAll(Arrays.asList(doctor1, doctor2, doctor3, doctor4, doctor5));
+            }
+            if (clinicEmployeeRepository.count() == 0) {
+                LocalDateTime now = LocalDateTime.now();
+
+                ClinicEmployee admin = new ClinicEmployee();
+                admin.setFirstName("Админ");
+                admin.setLastName("Администраторов");
+                admin.setUsername("admin");
+                admin.setPassword(passwordEncoder.encode("adminPassword"));
+                admin.setRole(ClinicEmployee.Role.ADMIN);
+                admin.setCreatedAt(now);
+                admin.setUpdatedAt(now);
+
+                ClinicEmployee receptionist = new ClinicEmployee();
+                receptionist.setFirstName("Регина");
+                receptionist.setLastName("Регистраторова");
+                receptionist.setUsername("receptionist");
+                receptionist.setPassword(passwordEncoder.encode("receptionistPassword"));
+                receptionist.setRole(ClinicEmployee.Role.RECEPTIONIST);
+                receptionist.setCreatedAt(now);
+                receptionist.setUpdatedAt(now);
+
+                clinicEmployeeRepository.saveAll(Arrays.asList(admin, receptionist));
             }
         };
     }
