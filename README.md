@@ -49,10 +49,83 @@ bot.token=your_bot_token
 - `com.uzumacademy.myTurn.repository`: Репозитории для работы с базой данных
 - `com.uzumacademy.myTurn.service`: Сервисные классы для бизнес-логики
 
-## Выгрузка списка записей к специалистам
+# Выгрузка списка записей к специалистам
 
-Выгрузка всего списка записей через API: 
-- `http://localhost:8080/api/admin/appointments`
 
-Выгрузка списка через API на запрашиваемый день:
-- `http://localhost:8080/api/admin/appointments?startDate=2024-08-14T00:00:00&endDate=2024-08-15T23:59:59`
+
+## Аутентификация
+
+Для использования API MyTurn необходимо сначала пройти аутентификацию. API использует JWT (JSON Web Token) для аутентификации.
+
+### Вход в систему
+
+```
+POST http://localhost:8080/api/clinic/auth/login
+```
+
+Тело запроса:
+```json
+{
+  "username": "ваше_имя_пользователя",
+  "password": "ваш_пароль"
+}
+```
+
+Ответ:
+```json
+{
+  "token": "ваш_jwt_токен"
+}
+```
+
+Используйте этот токен в заголовке Authorization для последующих запросов:
+```
+Authorization: Bearer ваш_jwt_токен
+```
+
+## Записи на прием
+
+### Получение списка записей
+
+Получает список записей на прием на основе указанных фильтров.
+
+```
+GET http://localhost:8080/api/clinic/appointments
+```
+
+Параметры запроса:
+- `startDate` (необязательно): Начальная дата диапазона записей (формат ISO 8601)
+- `endDate` (необязательно): Конечная дата диапазона записей (формат ISO 8601)
+- `doctorId` (необязательно): ID врача
+- `status` (необязательно): Статус записи (например, SCHEDULED, COMPLETED, CANCELLED)
+- `sortBy` (необязательно, по умолчанию: "appointmentTime"): Поле для сортировки
+- `sortDirection` (необязательно, по умолчанию: "asc"): Направление сортировки ("asc" или "desc")
+
+Пример запроса:
+```
+GET http://localhost:8080/api/clinic/appointments?startDate=2024-08-19T00:00:00&endDate=2024-08-26T23:59:59&doctorId=1&status=SCHEDULED
+```
+
+Ответ:
+```json
+[
+  {
+    "id": 1,
+    "userId": 100,
+    "userFirstName": "Иван",
+    "userLastName": "Иванов",
+    "userPhoneNumber": "+79001234567",
+    "doctor": {
+      "id": 1,
+      "firstName": "Петр",
+      "lastName": "Петров",
+      "specialization": "Кардиолог"
+    },
+    "appointmentTime": "2024-08-20T10:00:00",
+    "status": "SCHEDULED"
+  },
+  // ... другие записи
+]
+```
+
+Примечание: Убедитесь, что вы включили JWT токен в заголовок Authorization для этого запроса.

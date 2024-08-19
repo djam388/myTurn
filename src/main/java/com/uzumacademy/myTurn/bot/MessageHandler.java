@@ -1,5 +1,6 @@
 package com.uzumacademy.myTurn.bot;
 
+import com.uzumacademy.myTurn.bot.menu.MenuHandler;
 import com.uzumacademy.myTurn.dto.UserDTO;
 import com.uzumacademy.myTurn.service.UserService;
 import com.uzumacademy.myTurn.service.AuthenticationService;
