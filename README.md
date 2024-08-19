@@ -66,8 +66,8 @@ POST http://localhost:8080/api/clinic/auth/login
 Тело запроса:
 ```json
 {
-  "username": "ваше_имя_пользователя",
-  "password": "ваш_пароль"
+   "username": "admin",
+   "password": "adminPassword"
 }
 ```
 
@@ -109,22 +109,27 @@ GET http://localhost:8080/api/clinic/appointments?startDate=2024-08-19T00:00:00&
 Ответ:
 ```json
 [
-  {
-    "id": 1,
-    "userId": 100,
-    "userFirstName": "Иван",
-    "userLastName": "Иванов",
-    "userPhoneNumber": "+79001234567",
-    "doctor": {
+   {
       "id": 1,
-      "firstName": "Петр",
-      "lastName": "Петров",
-      "specialization": "Кардиолог"
-    },
-    "appointmentTime": "2024-08-20T10:00:00",
-    "status": "SCHEDULED"
-  },
-  // ... другие записи
+      "userId": 1,
+      "userFirstName": "о",
+      "userLastName": "д",
+      "userPhoneNumber": "+998933878538",
+      "doctor": {
+         "id": 1,
+         "firstName": "Иван",
+         "lastName": "Петров",
+         "specialization": "Терапевт",
+         "phoneNumber": "+00001234567",
+         "email": "ivan.petrov@example.com",
+         "createdAt": "2024-08-19T18:54:03.248352",
+         "updatedAt": "2024-08-19T18:54:03.248352",
+         "workingHours": [],
+         "active": true
+      },
+      "appointmentTime": "2024-08-21T13:00:00",
+      "status": "SCHEDULED"
+   }
 ]
 ```
 
