@@ -41,13 +41,54 @@ bot.token=your_bot_token
 - Просмотр ваших записей
 - Просмотр вашего профиля
 
+
 ## Структура проекта
 
-- `com.uzumacademy.myTurn.bot`: Содержит основную логику Telegram бота
+- `com.uzumacademy.myTurn.bot`: Содержит основные компоненты Telegram бота
+   - `menu`: Новый подпакет для обработки команд меню
+      - `commands`: Содержит классы отдельных команд
+      - `CommandChain`: Реализует паттерн Chain of Responsibility для обработки команд
+      - `MenuHandler`: Основной обработчик меню бота
+   - `AppointmentHandler`: Обработчик записей на прием
+   - `KeyboardFactory`: Фабрика для создания клавиатур бота
+   - `MessageHandler`: Обработчик входящих сообщений
+   - `MessageSender`: Отправка сообщений пользователям
+   - `MyTurnBot`: Основной класс бота
+   - `RegistrationHandler`: Обработчик процесса регистрации пользователей
+
 - `com.uzumacademy.myTurn.config`: Конфигурационные классы
-- `com.uzumacademy.myTurn.model`: Модели данных (User, Doctor, Appointment)
+   - `BotConfig`: Конфигурация бота
+   - `SecurityConfig`: Настройки безопасности
+   - `JpaConfig`: Конфигурация JPA
+   - `DataInitializer`: Инициализация начальных данных
+
+- `com.uzumacademy.myTurn.controller`: Контроллеры REST API
+   - `ClinicEmployeeAuthController`: Аутентификация сотрудников клиники
+   - `ClinicEmployeeController`: Управление сотрудниками клиники
+   - `ClinicManagementController`: Управление записями на прием
+
+- `com.uzumacademy.myTurn.dto`: Data Transfer Objects
+   - Классы DTO для передачи данных между слоями приложения
+
+- `com.uzumacademy.myTurn.model`: Модели данных
+   - `User`: Пользователь системы
+   - `Doctor`: Врач
+   - `Appointment`: Запись на прием
+   - `ClinicEmployee`: Сотрудник клиники
+
 - `com.uzumacademy.myTurn.repository`: Репозитории для работы с базой данных
+   - Интерфейсы репозиториев для каждой модели данных
+
 - `com.uzumacademy.myTurn.service`: Сервисные классы для бизнес-логики
+   - `AppointmentService`: Управление записями на прием
+   - `UserService`: Управление пользователями
+   - `DoctorService`: Управление данными врачей
+   - `ClinicEmployeeService`: Управление сотрудниками клиники
+   - `AuthenticationService`: Аутентификация пользователей
+
+- `com.uzumacademy.myTurn.security`: Компоненты безопасности
+   - `JwtAuthenticationFilter`: Фильтр аутентификации JWT
+   - `JwtTokenProvider`: Генерация и валидация JWT токенов
 
 # Выгрузка списка записей к специалистам
 
