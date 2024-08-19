@@ -155,7 +155,7 @@ GET http://localhost:8080/api/clinic/appointments?startDate=2024-08-19T00:00:00&
       "userId": 1,
       "userFirstName": "о",
       "userLastName": "д",
-      "userPhoneNumber": "+998933878538",
+      "userPhoneNumber": "+123456789012",
       "doctor": {
          "id": 1,
          "firstName": "Иван",
