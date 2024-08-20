@@ -8,5 +8,5 @@ VALUES
 
 INSERT INTO clinic_employees (first_name, last_name, username, password, role, created_at, updated_at)
 VALUES 
-('Админ', 'Администраторов', 'admin', '$2a$10$YOUR_ENCODED_PASSWORD_HERE', 'ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
-('Регина', 'Регистраторова', 'receptionist', '$2a$10$YOUR_ENCODED_PASSWORD_HERE', 'RECEPTIONIST', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
+('Админ', 'Администраторов', 'admin', '$2a$10$sHbZsSb9ztAN7rFuSpIAj.xMge9t2HOj3SgGxRg3LZNjggTmqpafG', 'ADMIN', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP),
+('Регина', 'Регистраторова', 'receptionist', '$2a$10$4u32w3rjLBiHebTou2lHxutPYxFnhn2n2867OFNqlSYjQ09WivCpq', 'RECEPTIONIST', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP);
