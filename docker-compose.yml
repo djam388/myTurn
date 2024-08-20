@@ -1,0 +1,25 @@
+services:
+  db:
+    build: ./postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: myturn
+      POSTGRES_USER: myturnuser
+      POSTGRES_PASSWORD: myturnpassword
+
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/myturn
+      SPRING_DATASOURCE_USERNAME: myturnuser
+      SPRING_DATASOURCE_PASSWORD: myturnpassword
+
+volumes:
+  postgres_data:
